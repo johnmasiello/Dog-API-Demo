@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">DogAPIDemo</string>
+    <string name="title_breed_detail">Breed Detail</string>
+</resources>
