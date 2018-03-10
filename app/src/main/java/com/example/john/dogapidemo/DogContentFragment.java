@@ -31,7 +31,6 @@ interface DownloadCallback {
 }
 
 // TODO: 1) make the async tasks run at the same time
-// TODO: 2) make the tasks resume on screen rotation if they were interrupted, rather than leave the data items partially populated
 /**
  * A headless fragment that loads the content for DOG API. It is reusable for each request.
  *
@@ -77,9 +76,7 @@ public class DogContentFragment extends Fragment {
                         ArrayList array = ((ArrayList) result);
 
                         for (int i = 0; i < array.size(); i++) {
-                            addItem(createDogItem(((String) array.get(i))));
-                            if (i == 9)
-                                break;
+                            addDogItemIfDoesNotExist((String) array.get(i));
                         }
 
                         downloadCallback.updateBreeds();
@@ -155,22 +152,34 @@ public class DogContentFragment extends Fragment {
     public static final Map<String, DogItem> ITEM_MAP = new HashMap<>();
 
     /**
-     * Wraps storing the item in both the hash map and the array list, the latter of which backs the array adapter
+     * <p>Wraps storing the item in both the hash map and the array list, the latter of which backs the array adapter</p>
+     * <p>Continues updating the item using DOG API, if the item is not fully initialized, ie the thumbnail url</p>
+     * @param title
      */
-    private void addItem(DogItem item) {
-        if (ITEM_MAP.put(item.id, item) == null) {
-            ITEMS.add(item);
+    private void addDogItemIfDoesNotExist(String title) {
+
+        DogItem dog;
+
+        if ( !ITEM_MAP.containsKey(title) ) {
+
+            dog = createDogItem(title);
+            ITEM_MAP.put(dog.id, dog);
+            ITEMS.add(dog);
+
+        } else {
+            dog = ITEM_MAP.get(title);
+        }
+
+        // Update item using DOG API
+        if (dog.url == null) {
+            loadBreedImagesUrl(dog);
         }
     }
 
     private DogItem createDogItem(String title) {
         String properTitle = toTitleCase(title);
 
-        DogItem dog = new DogItem(properTitle, properTitle, "//TODO: make url");
-
-        loadBreedImagesUrl(dog);
-
-        return dog;
+        return new DogItem(title, properTitle, null);
     }
 
     int findPosition(DogItem dogItem) {

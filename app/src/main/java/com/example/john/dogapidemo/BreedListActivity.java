@@ -137,7 +137,9 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
         public void onBindViewHolder(final ViewHolder holder, int position) {
             // todo customize binding data to the views in the list item
             holder.mIdView.setText(mValues.get(position).title);
-            holder.mContentView.setText(mValues.get(position).url);
+
+            String url = mValues.get(position).url;
+            holder.mContentView.setText(url != null ? url : "{URL goes here}");
 
             // Set the data item to the view's holder
             holder.itemView.setTag(mValues.get(position));
