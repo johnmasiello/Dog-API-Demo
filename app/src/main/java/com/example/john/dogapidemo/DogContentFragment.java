@@ -31,7 +31,7 @@ interface DownloadCallback {
 }
 
 // TODO: 1) make the async tasks run at the same time
-// TODO: 2) make the resume on screen rotation if they were interrupted, rather than leave the data items partially populated
+// TODO: 2) make the tasks resume on screen rotation if they were interrupted, rather than leave the data items partially populated
 /**
  * A headless fragment that loads the content for DOG API. It is reusable for each request.
  *
@@ -48,14 +48,15 @@ public class DogContentFragment extends Fragment {
     private static final int BREED_ALL_IMAGES = 1;
 
     private DownloadCallback downloadCallback;
+    private ArrayList<AsyncTask> asyncTasks;
 
     /**
      * Use DOG_API to load endpoint to list all master breeds
      */
     void loadBreeds() {
-        new RequestDogTask(new WeakReference<>(this)).execute(
+        asyncTasks.add(new RequestDogTask(new WeakReference<>(this)).execute(
                 new DogRequestItem(null, BREEDS)
-        );
+        ));
     }
 
     /**
@@ -63,8 +64,8 @@ public class DogContentFragment extends Fragment {
      * @param dog the reference to update dog.url when task finishes
      */
     void loadBreedImagesUrl(DogItem dog) {
-        new RequestDogTask(new WeakReference<>(this)).execute(
-                new DogRequestItem(dog, BREED_ALL_IMAGES));
+        asyncTasks.add(new RequestDogTask(new WeakReference<>(this)).execute(
+                new DogRequestItem(dog, BREED_ALL_IMAGES)));
     }
 
     private void handleResponse(DogRequestItem responseItem, Object result) {
@@ -75,8 +76,10 @@ public class DogContentFragment extends Fragment {
                     if (result instanceof ArrayList) {
                         ArrayList array = ((ArrayList) result);
 
-                        for (int i = 0, offset = ITEMS.size(); i < array.size(); i++) {
-                            addItem(createDogItem(offset + i, ((String) array.get(i))));
+                        for (int i = 0; i < array.size(); i++) {
+                            addItem(createDogItem(((String) array.get(i))));
+                            if (i == 9)
+                                break;
                         }
 
                         downloadCallback.updateBreeds();
@@ -87,7 +90,11 @@ public class DogContentFragment extends Fragment {
                     assert responseItem.dogItem != null;
                     responseItem.dogItem.url = (String)result;
 
-                    downloadCallback.updateDogItem_URL(Integer.parseInt(responseItem.dogItem.id));
+                    int position = findPosition(responseItem.dogItem);
+
+                    if (position >= 0) {
+                        downloadCallback.updateDogItem_URL(position);
+                    }
                     break;
             }
         } else {
@@ -100,7 +107,7 @@ public class DogContentFragment extends Fragment {
         switch (index) {
             case BREED_ALL_IMAGES:
                 assert dogRequestItem.dogItem != null;
-                return String.format(URLS[index], dogRequestItem.dogItem.title);
+                return String.format(URLS[index], dogRequestItem.dogItem.title.toLowerCase());
 
             default:
                 return URLS[index];
@@ -109,6 +116,7 @@ public class DogContentFragment extends Fragment {
 
     static DogContentFragment newInstance(FragmentManager fragmentManager) {
         DogContentFragment fragment = new DogContentFragment();
+        fragment.asyncTasks = new ArrayList<>(100);
         fragmentManager.beginTransaction().add(fragment, FRAGMENT_KEY).commit();
 
         return fragment;
@@ -126,8 +134,18 @@ public class DogContentFragment extends Fragment {
         downloadCallback = null;
     }
 
+    @Override
+    public void onDestroy() {
+        if (asyncTasks != null) {
+            for (AsyncTask task : asyncTasks) {
+                task.cancel(true);
+            }
+        }
+        super.onDestroy();
+    }
+
     /**
-     * An array of sample (dummy) items.
+     * An array of sample (dummy) items. Items must be added synchronously
      */
     public static final List<DogItem> ITEMS = new ArrayList<>();
 
@@ -140,22 +158,37 @@ public class DogContentFragment extends Fragment {
      * Wraps storing the item in both the hash map and the array list, the latter of which backs the array adapter
      */
     private void addItem(DogItem item) {
-        ITEMS.add(item);
-        ITEM_MAP.put(item.id, item);
+        if (ITEM_MAP.put(item.id, item) == null) {
+            ITEMS.add(item);
+        }
     }
 
-    private DogItem createDogItem(int position, String title) {
-        DogItem dog = new DogItem(String.valueOf(position), title, "//TODO: make url");
+    private DogItem createDogItem(String title) {
+        String properTitle = toTitleCase(title);
+
+        DogItem dog = new DogItem(properTitle, properTitle, "//TODO: make url");
 
         loadBreedImagesUrl(dog);
 
         return dog;
     }
 
+    int findPosition(DogItem dogItem) {
+        return ITEMS.indexOf(dogItem);
+    }
+
+    private String toTitleCase(String word) {
+        return String.valueOf(Character.toTitleCase(word.charAt(0))) +
+                word.substring(1);
+    }
+
     /**
      * A dummy item representing a piece of content.
      */
     public static class DogItem {
+        /**
+         * id is of form [this.title][suffix]
+         */
         public final String id;
         public String title;
         public String url;
@@ -169,6 +202,11 @@ public class DogContentFragment extends Fragment {
         @Override
         public String toString() {
             return title;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj != null && obj instanceof DogItem && id.equals(((DogItem) obj).id);
         }
     }
 
@@ -332,14 +370,33 @@ public class DogContentFragment extends Fragment {
         }
 
         @Override
-        protected void onPostExecute(Object obj) {
-            if (obj != null) {
+        protected void onCancelled(Object o) {
+            DogContentFragment fragment = dogContentFragmentWeakReference.get();
 
-                DogContentFragment fragment = dogContentFragmentWeakReference.get();
-
-                if (fragment != null)
-                    fragment.handleResponse(dogRequestItem, obj);
+            if (fragment != null) {
+                // All finished!
+                // Now clean up
+                fragment.asyncTasks.remove(this);
             }
+            Log.d("Download", "Cancelled");
+        }
+
+        @Override
+        protected void onPostExecute(Object obj) {
+            DogContentFragment fragment = dogContentFragmentWeakReference.get();
+
+            if (fragment != null) {
+
+                // Handle the result; ie update data, refresh list/detail views
+                if (obj != null && !isCancelled()) {
+                    fragment.handleResponse(dogRequestItem, obj);
+                }
+
+                // All finished!
+                // Now clean up
+                fragment.asyncTasks.remove(this);
+            }
+
         }
     }
 }
