@@ -30,7 +30,6 @@ interface DownloadCallback {
     void updateDogItem_URL(int position);
 }
 
-// TODO: 1) make the async tasks run at the same time
 /**
  * A headless fragment that loads the content for DOG API. It is reusable for each request.
  *
@@ -63,7 +62,8 @@ public class DogContentFragment extends Fragment {
      * @param dog the reference to update dog.url when task finishes
      */
     void loadBreedImagesUrl(DogItem dog) {
-        asyncTasks.add(new RequestDogTask(new WeakReference<>(this)).execute(
+        asyncTasks.add(new RequestDogTask(new WeakReference<>(this)).executeOnExecutor(
+                AsyncTask.THREAD_POOL_EXECUTOR,
                 new DogRequestItem(dog, BREED_ALL_IMAGES)));
     }
 
@@ -197,8 +197,12 @@ public class DogContentFragment extends Fragment {
     public static class DogItem {
         /**
          * id is of form [this.title][suffix]
+         * The suffix allows for multiple Dog Items with the same title
          */
         public final String id;
+        /**
+         * The breed of the dog is the title
+         */
         public String title;
         public String url;
 

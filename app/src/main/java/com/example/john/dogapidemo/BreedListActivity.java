@@ -9,7 +9,6 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -80,7 +79,6 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
     @Override
     public void updateDogItem_URL(int position) {
         if (adapter != null) {
-            // TODO: Update NotifyItemChanged with payload: url, only
             adapter.notifyItemChanged(position);
         }
     }
