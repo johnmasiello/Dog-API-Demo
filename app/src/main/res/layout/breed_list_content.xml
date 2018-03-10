@@ -1,21 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:orientation="horizontal">
 
-    <TextView
+    <android.support.v7.widget.AppCompatImageView
         android:id="@+id/item_thumb"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="@dimen/thumbWidth"
+        android:layout_height="@dimen/thumbWidth"
         android:layout_margin="@dimen/text_margin"
-        android:maxEms="8"
-        android:textAppearance="?attr/textAppearanceListItem" />
+        android:scaleType="centerCrop"
+        android:src="@android:drawable/ic_menu_gallery"
+        android:textAppearance="?attr/textAppearanceListItem"
+        />
 
     <TextView
         android:id="@+id/item_name"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:layout_margin="@dimen/text_margin"
-        android:textAppearance="?attr/textAppearanceListItem" />
+        android:gravity="center_vertical"
+        android:textAppearance="?attr/textAppearanceListItem"
+        tools:text="test" />
 </LinearLayout>

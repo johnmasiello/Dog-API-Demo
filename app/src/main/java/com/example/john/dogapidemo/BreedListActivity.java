@@ -2,6 +2,9 @@ package com.example.john.dogapidemo;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
@@ -12,8 +15,16 @@ import android.support.design.widget.Snackbar;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
+
+import com.nostra13.universalimageloader.core.DisplayImageOptions;
+import com.nostra13.universalimageloader.core.ImageLoader;
+import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
+import com.nostra13.universalimageloader.core.assist.ImageScaleType;
+import com.nostra13.universalimageloader.core.listener.SimpleImageLoadingListener;
+import com.nostra13.universalimageloader.core.process.BitmapProcessor;
 
 import java.util.List;
 
@@ -39,6 +50,9 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_breed_list);
+
+        // Create global configuration and initialize ImageLoader with this config
+        ImageLoader.getInstance().init(ImageLoaderConfiguration.createDefault(this));
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -79,12 +93,16 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
     @Override
     public void updateDogItem_URL(int position) {
         if (adapter != null) {
-            adapter.notifyItemChanged(position);
+            adapter.notifyItemChanged(position, DogContentFragment.ITEMS.get(position).url);
         }
     }
 
     private void setupRecyclerView(@NonNull RecyclerView recyclerView) {
-        this.adapter = new SimpleItemRecyclerViewAdapter(this, DogContentFragment.ITEMS, mTwoPane);
+        int width = getResources().getDimensionPixelSize(R.dimen.thumbWidth);
+
+        //noinspection SuspiciousNameCombination
+        this.adapter = new SimpleItemRecyclerViewAdapter(this, DogContentFragment.ITEMS, mTwoPane,
+                new Rect(0,0,width,width));
         recyclerView.setAdapter(adapter);
     }
 
@@ -94,6 +112,8 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
         private final BreedListActivity mParentActivity;
         private final List<DogContentFragment.DogItem> mValues;
         private final boolean mTwoPane;
+        private final Rect mIconRect;
+
         private final View.OnClickListener mOnClickListener = new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -118,10 +138,11 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
 
         SimpleItemRecyclerViewAdapter(BreedListActivity parent,
                                       List<DogContentFragment.DogItem> items,
-                                      boolean twoPane) {
+                                      boolean twoPane, Rect iconBoundary) {
             mValues = items;
             mParentActivity = parent;
             mTwoPane = twoPane;
+            mIconRect = iconBoundary;
         }
 
         @Override
@@ -137,11 +158,67 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
             holder.mIdView.setText(mValues.get(position).title);
 
             String url = mValues.get(position).url;
-            holder.mContentView.setText(url != null ? url : "{URL goes here}");
+            updateThumbnail(holder, url);
 
             // Set the data item to the view's holder
             holder.itemView.setTag(mValues.get(position));
             holder.itemView.setOnClickListener(mOnClickListener);
+        }
+
+        private void updateThumbnail(ViewHolder holder, final String url) {
+            if (url != null) {
+                ImageLoader imageLoader = ImageLoader.getInstance();
+                Bitmap loadedImage = imageLoader.getMemoryCache().get(url+"_ic");
+
+                // Use the cached image
+                if (loadedImage != null) {
+                    holder.mContentView.setImageBitmap(loadedImage);
+                } else {
+
+
+                    // Download the image url and load into the target view
+                    DisplayImageOptions options = new DisplayImageOptions.Builder()
+                            .imageScaleType(ImageScaleType.IN_SAMPLE_POWER_OF_2)
+                            .cacheInMemory(true)
+                            .postProcessor(new BitmapProcessor() { // Resample the image to icon size
+                                @Override
+                                public Bitmap process(Bitmap bitmap) {
+                                    Bitmap dst = Bitmap.createBitmap(mIconRect.width(), mIconRect.height(), bitmap.getConfig());
+                                    Canvas canvas = new Canvas(dst);
+                                    canvas.drawBitmap(bitmap, null, mIconRect, null);
+                                    return dst;
+                                }
+                            })
+                            .build();
+
+                    imageLoader.displayImage(url, holder.mContentView,
+                            options,
+                            new SimpleImageLoadingListener() {
+                                @Override
+                                public void onLoadingComplete(String imageUri, View view, Bitmap loadedImage) {
+                                    cacheImage(url + "_ic", loadedImage);
+                                }
+                            });
+                }
+            }
+        }
+
+        private void cacheImage(String key, Bitmap loadedImage) {
+            ImageLoader.getInstance().getMemoryCache().put(key, loadedImage);
+        }
+
+        @Override
+        public void onBindViewHolder(ViewHolder holder, int position, List<Object> payloads) {
+            if (payloads.isEmpty()) {
+                super.onBindViewHolder(holder, position, payloads);
+            } else {
+
+                Object payload = payloads.get(payloads.size() - 1);
+
+                if (payload instanceof String) {
+                    updateThumbnail(holder, (String) payload);
+                }
+            }
         }
 
         @Override
@@ -152,7 +229,7 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
         class ViewHolder extends RecyclerView.ViewHolder {
             // todo customize to handle the view outlets of the list item layout
             final TextView mIdView;
-            final TextView mContentView;
+            final ImageView mContentView;
 
             ViewHolder(View view) {
                 super(view);
