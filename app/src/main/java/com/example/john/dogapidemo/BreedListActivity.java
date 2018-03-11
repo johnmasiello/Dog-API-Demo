@@ -7,24 +7,23 @@ import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-
 import com.nostra13.universalimageloader.core.DisplayImageOptions;
 import com.nostra13.universalimageloader.core.ImageLoader;
 import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
-import com.nostra13.universalimageloader.core.assist.ImageScaleType;
-import com.nostra13.universalimageloader.core.listener.SimpleImageLoadingListener;
 import com.nostra13.universalimageloader.core.process.BitmapProcessor;
+import com.nostra13.universalimageloader.utils.MemoryCacheUtils;
 
 import java.util.List;
 
@@ -51,8 +50,11 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_breed_list);
 
-        // Create global configuration and initialize ImageLoader with this config
-        ImageLoader.getInstance().init(ImageLoaderConfiguration.createDefault(this));
+        ImageLoaderConfiguration config = new ImageLoaderConfiguration.Builder(this)
+                .denyCacheImageMultipleSizesInMemory()
+                .writeDebugLogs()
+                .build();
+        ImageLoader.getInstance().init(config);
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -168,43 +170,59 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
         private void updateThumbnail(ViewHolder holder, final String url) {
             if (url != null) {
                 ImageLoader imageLoader = ImageLoader.getInstance();
-                Bitmap loadedImage = imageLoader.getMemoryCache().get(url+"_ic");
+                List<Bitmap> bitmaps = MemoryCacheUtils.findCachedBitmapsForImageUri(url, imageLoader.getMemoryCache());
+                Bitmap loadedImage = !bitmaps.isEmpty() ? bitmaps.get(0) : null;
 
                 // Use the cached image
                 if (loadedImage != null) {
                     holder.mContentView.setImageBitmap(loadedImage);
+                    Log.d("Thumbnail", "using cached image");
                 } else {
+                    Log.d("Thumbnail", "fetching image: "+url);
 
+                    final Rect thumb = holder.thumbRect;
 
                     // Download the image url and load into the target view
-                    DisplayImageOptions options = new DisplayImageOptions.Builder()
-                            .imageScaleType(ImageScaleType.IN_SAMPLE_POWER_OF_2)
+                    DisplayImageOptions thumbOptions = new DisplayImageOptions.Builder()
                             .cacheInMemory(true)
-                            .postProcessor(new BitmapProcessor() { // Resample the image to icon size
+                            .preProcessor(new BitmapProcessor() { // Resample the image to icon size to save memory/ use less cache
                                 @Override
                                 public Bitmap process(Bitmap bitmap) {
                                     Bitmap dst = Bitmap.createBitmap(mIconRect.width(), mIconRect.height(), bitmap.getConfig());
+
                                     Canvas canvas = new Canvas(dst);
-                                    canvas.drawBitmap(bitmap, null, mIconRect, null);
+                                    canvas.drawBitmap(bitmap,
+                                            findSourceCrop(thumb, bitmap.getWidth(), bitmap.getHeight())
+                                            , mIconRect, null);
                                     return dst;
+                                }
+
+                                private Rect findSourceCrop(Rect src, int width, int height) {
+                                    // Algorithm to crop a square from the source bitmap, given its width and height
+
+                                    int inset;
+
+                                    if (width > height) {
+                                        // Cut the width,
+                                        // by rounding the edges out
+
+                                        // Round the inset down
+                                        inset = (width - height) / 2;
+                                        src.set(inset, 0, width - inset, height);
+                                    } else {
+                                        // In similar fashion, cut the height
+                                        inset = (height - width) / 2;
+                                        src.set(0, inset, width, height - inset);
+                                    }
+                                    return src;
                                 }
                             })
                             .build();
 
                     imageLoader.displayImage(url, holder.mContentView,
-                            options,
-                            new SimpleImageLoadingListener() {
-                                @Override
-                                public void onLoadingComplete(String imageUri, View view, Bitmap loadedImage) {
-                                    cacheImage(url + "_ic", loadedImage);
-                                }
-                            });
+                            thumbOptions);
                 }
             }
-        }
-
-        private void cacheImage(String key, Bitmap loadedImage) {
-            ImageLoader.getInstance().getMemoryCache().put(key, loadedImage);
         }
 
         @Override
@@ -231,10 +249,14 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
             final TextView mIdView;
             final ImageView mContentView;
 
+            final Rect thumbRect;
+
             ViewHolder(View view) {
                 super(view);
                 mIdView = view.findViewById(R.id.item_name);
                 mContentView = view.findViewById(R.id.item_thumb);
+
+                thumbRect = new Rect();
             }
         }
     }
