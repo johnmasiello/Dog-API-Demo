@@ -8,6 +8,7 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -42,6 +43,10 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
     private boolean mTwoPane;
     private DogContentFragment dogContentFragment;
     private SimpleItemRecyclerViewAdapter adapter;
+    private RecyclerView recyclerView;
+    private int scrollPosition = 0;
+
+    private final static String SCROLL_POSITION = "ScrollPos";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,11 +77,26 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
         }
 
         dogContentFragment = DogContentFragment.newInstance(getSupportFragmentManager());
-        dogContentFragment.loadBreeds();
 
-        RecyclerView recyclerView = findViewById(R.id.breed_list);
+        if (savedInstanceState != null) {
+            scrollPosition = savedInstanceState.getInt(SCROLL_POSITION);
+        }
+
+        recyclerView = findViewById(R.id.breed_list);
         assert recyclerView != null;
         setupRecyclerView(recyclerView);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt(SCROLL_POSITION, scrollPosition);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        recyclerView.getLayoutManager().scrollToPosition(scrollPosition);
     }
 
     @Override
@@ -109,6 +129,20 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
     private void setupRecyclerView(@NonNull RecyclerView recyclerView) {
         this.adapter = new SimpleItemRecyclerViewAdapter(this, DogContentFragment.ITEMS, mTwoPane);
         recyclerView.setAdapter(adapter);
+
+        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    scrollPosition =
+                        ((LinearLayoutManager) recyclerView.getLayoutManager()).
+                                findFirstCompletelyVisibleItemPosition();
+                }
+                super.onScrollStateChanged(recyclerView, newState);
+            }
+        });
+
+        recyclerView.getLayoutManager().scrollToPosition(scrollPosition);
     }
 
     public static class SimpleItemRecyclerViewAdapter
@@ -117,6 +151,7 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
         private final BreedListActivity mParentActivity;
         private final List<DogContentFragment.DogItem> mValues;
         private final boolean mTwoPane;
+
 
         private final View.OnClickListener mOnClickListener = new View.OnClickListener() {
             @Override

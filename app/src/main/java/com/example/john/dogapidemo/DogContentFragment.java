@@ -1,5 +1,6 @@
 package com.example.john.dogapidemo;
 
+import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -112,9 +113,12 @@ public class DogContentFragment extends Fragment {
     }
 
     static DogContentFragment newInstance(FragmentManager fragmentManager) {
-        DogContentFragment fragment = new DogContentFragment();
-        fragment.asyncTasks = new ArrayList<>(100);
-        fragmentManager.beginTransaction().add(fragment, FRAGMENT_KEY).commit();
+        DogContentFragment fragment = (DogContentFragment) fragmentManager.findFragmentByTag(FRAGMENT_KEY);
+
+        if (fragment == null) {
+            fragment = new DogContentFragment();
+            fragmentManager.beginTransaction().add(fragment, FRAGMENT_KEY).commit();
+        }
 
         return fragment;
     }
@@ -123,6 +127,18 @@ public class DogContentFragment extends Fragment {
     public void onAttach(Context context) {
         super.onAttach(context);
         downloadCallback = (DownloadCallback)context;
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        asyncTasks = new ArrayList<>(100);
+    }
+
+    @Override
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        loadBreeds();
     }
 
     @Override
