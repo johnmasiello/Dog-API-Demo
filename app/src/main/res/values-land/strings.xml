@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="breed_detail_feature_graphic_constraint">h,1:1</string>
+    <bool name="expandedToolBarLayout">false</bool>
+</resources>

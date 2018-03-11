@@ -2,4 +2,6 @@
     <string name="app_name">DogAPIDemo</string>
     <string name="app_label">Dog API Demo</string>
     <string name="title_breed_detail">Breed Detail</string>
+    <string name="breed_detail_feature_graphic_constraint">w,1:1</string>
+    <bool name="expandedToolBarLayout">true</bool>
 </resources>

@@ -48,12 +48,7 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_breed_list);
 
-        ImageLoaderConfiguration config = new ImageLoaderConfiguration.Builder(this)
-                .denyCacheImageMultipleSizesInMemory()
-                .writeDebugLogs()
-                .memoryCacheSize(25000000)
-                .build();
-        ImageLoader.getInstance().init(config);
+        setUpImageLoader();
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -85,12 +80,6 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
     }
 
     @Override
-    protected void onDestroy() {
-        ImageLoader.getInstance().getMemoryCache().clear();
-        super.onDestroy();
-    }
-
-    @Override
     public void updateBreeds() {
         if (adapter != null) {
             adapter.notifyDataSetChanged();
@@ -101,6 +90,19 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
     public void updateDogItem_URL(int position) {
         if (adapter != null) {
             adapter.notifyItemChanged(position, DogContentFragment.ITEMS.get(position).url);
+        }
+    }
+
+    private void setUpImageLoader() {
+        if (!ImageLoader.getInstance().isInited()) {
+            Log.d("InitL", "needs init");
+
+            ImageLoaderConfiguration config = new ImageLoaderConfiguration.Builder(getApplicationContext())
+                    .denyCacheImageMultipleSizesInMemory()
+                    .writeDebugLogs()
+                    .memoryCacheSize(25000000)
+                    .build();
+            ImageLoader.getInstance().init(config);
         }
     }
 
@@ -198,7 +200,7 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
                 super.onBindViewHolder(holder, position, payloads);
             } else {
 
-                Object payload = payloads.get(payloads.size() - 1);
+                Object payload = payloads.get(0);
 
                 if (payload instanceof String) {
                     updateThumbnail(holder, (String) payload);
