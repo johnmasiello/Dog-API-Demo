@@ -3,8 +3,6 @@ package com.example.john.dogapidemo;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.Rect;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
@@ -22,7 +20,7 @@ import android.widget.TextView;
 import com.nostra13.universalimageloader.core.DisplayImageOptions;
 import com.nostra13.universalimageloader.core.ImageLoader;
 import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
-import com.nostra13.universalimageloader.core.process.BitmapProcessor;
+import com.nostra13.universalimageloader.core.assist.ImageScaleType;
 import com.nostra13.universalimageloader.utils.MemoryCacheUtils;
 
 import java.util.List;
@@ -53,6 +51,7 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
         ImageLoaderConfiguration config = new ImageLoaderConfiguration.Builder(this)
                 .denyCacheImageMultipleSizesInMemory()
                 .writeDebugLogs()
+                .memoryCacheSize(25000000)
                 .build();
         ImageLoader.getInstance().init(config);
 
@@ -86,6 +85,12 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
     }
 
     @Override
+    protected void onDestroy() {
+        ImageLoader.getInstance().getMemoryCache().clear();
+        super.onDestroy();
+    }
+
+    @Override
     public void updateBreeds() {
         if (adapter != null) {
             adapter.notifyDataSetChanged();
@@ -100,11 +105,7 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
     }
 
     private void setupRecyclerView(@NonNull RecyclerView recyclerView) {
-        int width = getResources().getDimensionPixelSize(R.dimen.thumbWidth);
-
-        //noinspection SuspiciousNameCombination
-        this.adapter = new SimpleItemRecyclerViewAdapter(this, DogContentFragment.ITEMS, mTwoPane,
-                new Rect(0,0,width,width));
+        this.adapter = new SimpleItemRecyclerViewAdapter(this, DogContentFragment.ITEMS, mTwoPane);
         recyclerView.setAdapter(adapter);
     }
 
@@ -114,7 +115,6 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
         private final BreedListActivity mParentActivity;
         private final List<DogContentFragment.DogItem> mValues;
         private final boolean mTwoPane;
-        private final Rect mIconRect;
 
         private final View.OnClickListener mOnClickListener = new View.OnClickListener() {
             @Override
@@ -140,11 +140,10 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
 
         SimpleItemRecyclerViewAdapter(BreedListActivity parent,
                                       List<DogContentFragment.DogItem> items,
-                                      boolean twoPane, Rect iconBoundary) {
+                                      boolean twoPane) {
             mValues = items;
             mParentActivity = parent;
             mTwoPane = twoPane;
-            mIconRect = iconBoundary;
         }
 
         @Override
@@ -180,43 +179,11 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
                 } else {
                     Log.d("Thumbnail", "fetching image: "+url);
 
-                    final Rect thumb = holder.thumbRect;
-
                     // Download the image url and load into the target view
                     DisplayImageOptions thumbOptions = new DisplayImageOptions.Builder()
                             .cacheInMemory(true)
-                            .preProcessor(new BitmapProcessor() { // Resample the image to icon size to save memory/ use less cache
-                                @Override
-                                public Bitmap process(Bitmap bitmap) {
-                                    Bitmap dst = Bitmap.createBitmap(mIconRect.width(), mIconRect.height(), bitmap.getConfig());
-
-                                    Canvas canvas = new Canvas(dst);
-                                    canvas.drawBitmap(bitmap,
-                                            findSourceCrop(thumb, bitmap.getWidth(), bitmap.getHeight())
-                                            , mIconRect, null);
-                                    return dst;
-                                }
-
-                                private Rect findSourceCrop(Rect src, int width, int height) {
-                                    // Algorithm to crop a square from the source bitmap, given its width and height
-
-                                    int inset;
-
-                                    if (width > height) {
-                                        // Cut the width,
-                                        // by rounding the edges out
-
-                                        // Round the inset down
-                                        inset = (width - height) / 2;
-                                        src.set(inset, 0, width - inset, height);
-                                    } else {
-                                        // In similar fashion, cut the height
-                                        inset = (height - width) / 2;
-                                        src.set(0, inset, width, height - inset);
-                                    }
-                                    return src;
-                                }
-                            })
+                            .imageScaleType(ImageScaleType.EXACTLY) // Sample the image to thumbnail size to reduce memory
+                            .bitmapConfig(Bitmap.Config.RGB_565)
                             .build();
 
                     imageLoader.displayImage(url, holder.mContentView,
@@ -249,14 +216,10 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
             final TextView mIdView;
             final ImageView mContentView;
 
-            final Rect thumbRect;
-
             ViewHolder(View view) {
                 super(view);
                 mIdView = view.findViewById(R.id.item_name);
                 mContentView = view.findViewById(R.id.item_thumb);
-
-                thumbRect = new Rect();
             }
         }
     }
