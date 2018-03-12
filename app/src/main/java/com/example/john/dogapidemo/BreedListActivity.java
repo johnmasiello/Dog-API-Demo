@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -74,7 +75,7 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
             mTwoPane = true;
         }
 
-        DogContentFragment.newInstance(getSupportFragmentManager());
+        DogContentFragment.getInstance(getSupportFragmentManager());
 
         if (savedInstanceState != null) {
             scrollPosition = savedInstanceState.getInt(SCROLL_POSITION);
@@ -146,12 +147,18 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
             public void onClick(View view) {
                 DogContentFragment.DogItem item = (DogContentFragment.DogItem) view.getTag();
                 if (mTwoPane) {
+                    FragmentManager fm = mParentActivity.getSupportFragmentManager();
+
                     Bundle arguments = new Bundle();
                     arguments.putString(BreedDetailFragment.ARG_ITEM_ID, item.id);
                     BreedDetailFragment fragment = new BreedDetailFragment();
                     fragment.setArguments(arguments);
-                    mParentActivity.getSupportFragmentManager().beginTransaction()
-                            .replace(R.id.breed_detail_container, fragment)
+
+                    // Connect the detail fragment to the headless-data fragment
+                    fragment.setTargetFragment(DogContentFragment.getInstance(fm), 0);
+
+                    fm.beginTransaction()
+                            .replace(R.id.breed_detail_container, fragment, BreedDetailFragment.BREED_DETAIL_FRAGMENT)
                             .commit();
                 } else {
                     Context context = view.getContext();

@@ -10,7 +10,7 @@
         android:id="@+id/item_thumb"
         android:layout_width="@dimen/thumbWidth"
         android:layout_height="@dimen/thumbWidth"
-        android:layout_margin="@dimen/text_margin"
+        android:layout_margin="@dimen/thumb_margin"
         android:scaleType="centerCrop"
         android:src="@android:drawable/ic_menu_gallery"
         android:textAppearance="?attr/textAppearanceListItem"

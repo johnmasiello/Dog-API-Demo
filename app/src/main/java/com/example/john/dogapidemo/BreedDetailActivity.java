@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.FragmentManager;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.support.v7.app.AppCompatActivity;
@@ -51,6 +52,9 @@ public class BreedDetailActivity extends AppCompatActivity {
         // http://developer.android.com/guide/components/fragments.html
         //
         if (savedInstanceState == null) {
+
+            FragmentManager fm = getSupportFragmentManager();
+
             // Create the detail fragment and add it to the activity
             // using a fragment transaction.
             Bundle arguments = new Bundle();
@@ -58,8 +62,12 @@ public class BreedDetailActivity extends AppCompatActivity {
                     getIntent().getStringExtra(BreedDetailFragment.ARG_ITEM_ID));
             BreedDetailFragment fragment = new BreedDetailFragment();
             fragment.setArguments(arguments);
-            getSupportFragmentManager().beginTransaction()
-                    .add(R.id.breed_detail_container, fragment)
+
+            // Connect the detail fragment to the headless-data fragment
+            fragment.setTargetFragment(DogContentFragment.getInstance(fm), 0);
+
+            fm.beginTransaction()
+                    .add(R.id.breed_detail_container, fragment, BreedDetailFragment.BREED_DETAIL_FRAGMENT)
                     .commit();
         }
     }

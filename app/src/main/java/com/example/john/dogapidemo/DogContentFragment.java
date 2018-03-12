@@ -1,6 +1,7 @@
 package com.example.john.dogapidemo;
 
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -8,6 +9,8 @@ import android.content.Context;
 import android.os.AsyncTask;
 import android.util.JsonReader;
 import android.util.Log;
+
+import com.nostra13.universalimageloader.core.ImageLoader;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,6 +35,13 @@ interface DownloadCallback {
 }
 
 /**
+ * An interface to implement by any Detail fragment that uses DogContentFragment
+ */
+interface DetailDownloadCallback {
+    void updateDogWithRandomImage();
+}
+
+/**
  * A headless fragment that loads the content for DOG API. It is reusable for each request.
  *
  */
@@ -40,14 +50,21 @@ public class DogContentFragment extends Fragment {
     private static final String FRAGMENT_KEY = "DogContentFragment";
     private static final String[] URLS = {
             "https://dog.ceo/api/breeds/list/all",
-            "https://dog.ceo/api/breed/%s/images"
+            "https://dog.ceo/api/breed/%s/images",
+            "https://dog.ceo/api/breed/%s/images/random"
         };
 
     private static final int BREEDS = 0;
     private static final int BREED_ALL_IMAGES = 1;
+    private static final int BREED_RANDOM_IMAGE = 2;
 
     private DownloadCallback downloadCallback;
+    private WeakReference<DetailDownloadCallback> detailDownloadCallback;
     private ArrayList<AsyncTask> asyncTasks;
+
+    public DogContentFragment() {
+        asyncTasks = new ArrayList<>(100);
+    }
 
     /**
      * Use DOG_API to load endpoint to list all master breeds
@@ -68,11 +85,20 @@ public class DogContentFragment extends Fragment {
                 new DogRequestItem(dog, BREED_ALL_IMAGES)));
     }
 
+    void loadBreedRandomImageUrl(DogItem dog, @NonNull WeakReference<DetailDownloadCallback>
+            detailDownloadCallback) {
+
+        this.detailDownloadCallback = detailDownloadCallback;
+        asyncTasks.add(new RequestDogTask(new WeakReference<>(this)).execute(
+                new DogRequestItem(dog, BREED_RANDOM_IMAGE)
+        ));
+    }
+
     private void handleResponse(DogRequestItem responseItem, Object result) {
 
-        if (downloadCallback != null) {
-            switch (responseItem.requestIndex) {
-                case BREEDS:
+        switch (responseItem.requestIndex) {
+            case BREEDS:
+                if (downloadCallback != null) {
                     if (result instanceof ArrayList) {
                         ArrayList array = ((ArrayList) result);
 
@@ -81,29 +107,54 @@ public class DogContentFragment extends Fragment {
                         }
 
                         downloadCallback.updateBreeds();
+                        return;
                     }
-                    break;
+                }
+                break;
 
-                case BREED_ALL_IMAGES:
+            case BREED_ALL_IMAGES:
+                if (downloadCallback != null) {
                     assert responseItem.dogItem != null;
-                    responseItem.dogItem.url = (String)result;
+                    responseItem.dogItem.url = (String) result;
 
                     int position = findPosition(responseItem.dogItem);
 
                     if (position >= 0) {
                         downloadCallback.updateDogItem_URL(position);
                     }
-                    break;
-            }
-        } else {
-            Log.d("DownloadTask", "download callback is unset; unable to handle response");
+                    return;
+                }
+                break;
+
+            case BREED_RANDOM_IMAGE:
+                if (detailDownloadCallback != null) {
+                    DogItem dog = responseItem.dogItem;
+
+                    assert dog != null;
+                    dog.clearRandomURlFromCache();
+                    dog.randomUrl = (String) result;
+
+                    // WeakReference, to check if callback is sent to GC
+                    DetailDownloadCallback callback = detailDownloadCallback.get();
+
+                    if (callback != null) {
+                        callback.updateDogWithRandomImage();
+                        return;
+                    }
+                }
+                break;
+
+            default:
+                return;
         }
+        Log.d("DownloadTask", "download callback is unset; unable to handle response");
     }
 
     private String makeURL(DogRequestItem dogRequestItem) {
         int index = dogRequestItem.requestIndex;
         switch (index) {
             case BREED_ALL_IMAGES:
+            case BREED_RANDOM_IMAGE:
                 assert dogRequestItem.dogItem != null;
                 return String.format(URLS[index], dogRequestItem.dogItem.title.toLowerCase());
 
@@ -112,7 +163,7 @@ public class DogContentFragment extends Fragment {
         }
     }
 
-    static DogContentFragment newInstance(FragmentManager fragmentManager) {
+    static DogContentFragment getInstance(FragmentManager fragmentManager) {
         DogContentFragment fragment = (DogContentFragment) fragmentManager.findFragmentByTag(FRAGMENT_KEY);
 
         if (fragment == null) {
@@ -126,13 +177,14 @@ public class DogContentFragment extends Fragment {
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        downloadCallback = (DownloadCallback)context;
+        if (context instanceof DownloadCallback) {
+            downloadCallback = (DownloadCallback) context;
+        }
     }
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        asyncTasks = new ArrayList<>(100);
     }
 
     @Override
@@ -145,6 +197,7 @@ public class DogContentFragment extends Fragment {
     public void onDetach() {
         super.onDetach();
         downloadCallback = null;
+        Log.d("Myfragment", "detach");
     }
 
     @Override
@@ -170,7 +223,7 @@ public class DogContentFragment extends Fragment {
     /**
      * <p>Wraps storing the item in both the hash map and the array list, the latter of which backs the array adapter</p>
      * <p>Continues updating the item using DOG API, if the item is not fully initialized, ie the thumbnail url</p>
-     * @param title
+     * @param title Title or breed of the dog
      */
     private void addDogItemIfDoesNotExist(String title) {
 
@@ -219,13 +272,15 @@ public class DogContentFragment extends Fragment {
         /**
          * The breed of the dog is the title
          */
-        public String title;
-        public String url;
+        String title;
+        String url;
+        String randomUrl;
 
         DogItem(String id, String title, String url) {
             this.id = id;
             this.title = title;
             this.url = url;
+            this.randomUrl = null;
         }
 
         @Override
@@ -236,6 +291,17 @@ public class DogContentFragment extends Fragment {
         @Override
         public boolean equals(Object obj) {
             return obj != null && obj instanceof DogItem && id.equals(((DogItem) obj).id);
+        }
+
+        /**
+         * Call from the main thread
+         */
+        void clearRandomURlFromCache() {
+            ImageLoader loader = ImageLoader.getInstance();
+
+            if (randomUrl != null && !randomUrl.equals(url) && loader.isInited()) {
+                loader.getMemoryCache().remove(randomUrl);
+            }
         }
     }
 
@@ -362,7 +428,6 @@ public class DogContentFragment extends Fragment {
                                     break;
 
                                 case BREED_ALL_IMAGES:
-
                                     jsonReader.beginArray();
                                     if (jsonReader.hasNext()) {
                                         result = jsonReader.nextString();
@@ -371,6 +436,10 @@ public class DogContentFragment extends Fragment {
                                         throw new IOException("OK");
                                     }
                                     jsonReader.endArray();
+                                    break;
+
+                                case BREED_RANDOM_IMAGE:
+                                    result = jsonReader.nextString();
                                     break;
                             }
                             break;
