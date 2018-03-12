@@ -108,7 +108,6 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
     private void setUpImageLoader() {
         if (!ImageLoader.getInstance().isInited()) {
             ImageLoaderConfiguration config = new ImageLoaderConfiguration.Builder(getApplicationContext())
-                    .denyCacheImageMultipleSizesInMemory()
                     .memoryCacheSize(25000000)
                     .build();
             ImageLoader.getInstance().init(config);

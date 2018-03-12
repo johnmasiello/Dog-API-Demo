@@ -9,7 +9,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
+import com.nostra13.universalimageloader.core.DisplayImageOptions;
 import com.nostra13.universalimageloader.core.ImageLoader;
+import com.nostra13.universalimageloader.core.listener.SimpleImageLoadingListener;
 import com.nostra13.universalimageloader.utils.MemoryCacheUtils;
 
 import java.util.List;
@@ -26,6 +28,8 @@ public class BreedDetailFragment extends Fragment {
      * represents.
      */
     public static final String ARG_ITEM_ID = "item_id";
+
+    public static final String LARGE_IMAGE_URI_SUFFIX = "_large";
 
     /**
      * The dummy title this fragment is presenting.
@@ -48,20 +52,25 @@ public class BreedDetailFragment extends Fragment {
             // arguments. In a real-world scenario, use a Loader
             // to load title from a title provider.
             mItem = DogContentFragment.ITEM_MAP.get(getArguments().getString(ARG_ITEM_ID));
-
-            android.app.Activity activity = this.getActivity();
-            CollapsingToolbarLayout appBarLayout = activity.findViewById(R.id.toolbar_layout);
-            if (appBarLayout != null) {
-                appBarLayout.setTitle(mItem.title);
-            }
         }
 
         setHasOptionsMenu(true);
+        // The fragment is retained, so it will not call onDestroy until the user navigates
+        // away from the fragment
+        setRetainInstance(true);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+        // Set the title
+        android.app.Activity activity = this.getActivity();
+        CollapsingToolbarLayout appBarLayout = activity.findViewById(R.id.toolbar_layout);
+        if (appBarLayout != null) {
+            appBarLayout.setTitle(mItem.title);
+        }
+
+
         // todo customize breed detail view
         View rootView = inflater.inflate(R.layout.breed_detail, container, false);
 
@@ -72,21 +81,51 @@ public class BreedDetailFragment extends Fragment {
 
             if (url != null) {
                 ImageLoader imageLoader = ImageLoader.getInstance();
-                List<Bitmap> bitmaps = MemoryCacheUtils.findCachedBitmapsForImageUri(url, imageLoader.getMemoryCache());
-                Bitmap loadedImage = !bitmaps.isEmpty() ? bitmaps.get(0) : null;
+                Bitmap largeImage = imageLoader.getMemoryCache().get(mItem.url + LARGE_IMAGE_URI_SUFFIX);
 
-                // Use the cached image for placeholder
-                if (loadedImage != null) {
-                    imageView.setImageBitmap(loadedImage);
+                if (largeImage != null) {
+                    imageView.setImageBitmap(largeImage);
+                } else {
+
+                    List<Bitmap> bitmaps = MemoryCacheUtils.findCachedBitmapsForImageUri(url, imageLoader.getMemoryCache());
+                    Bitmap loadedImage = !bitmaps.isEmpty() ? bitmaps.get(0) : null;
+
+                    // Use the cached image for placeholder
+                    if (loadedImage != null) {
+                        imageView.setImageBitmap(loadedImage);
+                    }
+
+                    // Download the image url and load into the target view
+                    imageLoader.displayImage(url, imageView,
+                            new DisplayImageOptions.Builder()
+                                .cacheInMemory(false)
+                                .build(),
+                            new SimpleImageLoadingListener() {
+                        @Override
+                        public void onLoadingComplete(String imageUri, View view, Bitmap loadedImage) {
+                            ImageLoader.getInstance().getMemoryCache().put(imageUri + LARGE_IMAGE_URI_SUFFIX,
+                                    loadedImage);
+                        }
+                    });
                 }
-
-                // Download the image url and load into the target view
-                imageLoader.displayImage(url, imageView);
             }
         }
 
         return rootView;
     }
+
+    @Override
+    public void onDestroy() {
+
+        // Remove the large image from the memory cache
+        ImageLoader imageLoader = ImageLoader.getInstance();
+        if (imageLoader.isInited() && mItem != null) {
+            imageLoader.getMemoryCache().remove(mItem.url + LARGE_IMAGE_URI_SUFFIX);
+        }
+        super.onDestroy();
+    }
+
+
 
     // todo create more menu options to show sub breeds
 }
