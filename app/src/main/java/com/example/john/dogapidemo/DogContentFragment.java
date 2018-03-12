@@ -302,6 +302,15 @@ public class DogContentFragment extends Fragment {
             if (randomUrl != null && !randomUrl.equals(url) && loader.isInited()) {
                 loader.getMemoryCache().remove(randomUrl);
             }
+            randomUrl = null;
+        }
+
+        /**
+         *
+         * @return randomUrl != null ? randomUrl : url
+         */
+        String getCurrentURL() {
+            return randomUrl != null ? randomUrl : url;
         }
     }
 

@@ -82,7 +82,7 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
 
         // Show the dummy title as text in a TextView.
         if (mItem != null) {
-            String url = mItem.url;
+            String url = mItem.getCurrentURL();
 
             if (url != null) {
                 ImageLoader imageLoader = ImageLoader.getInstance();
