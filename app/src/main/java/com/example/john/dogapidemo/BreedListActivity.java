@@ -11,7 +11,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,6 +21,7 @@ import com.nostra13.universalimageloader.core.DisplayImageOptions;
 import com.nostra13.universalimageloader.core.ImageLoader;
 import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
 import com.nostra13.universalimageloader.core.assist.ImageScaleType;
+import com.nostra13.universalimageloader.core.imageaware.ImageViewAware;
 import com.nostra13.universalimageloader.utils.MemoryCacheUtils;
 
 import java.util.List;
@@ -41,9 +41,7 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
      * device.
      */
     private boolean mTwoPane;
-    private DogContentFragment dogContentFragment;
     private SimpleItemRecyclerViewAdapter adapter;
-    private RecyclerView recyclerView;
     private int scrollPosition = 0;
 
     private final static String SCROLL_POSITION = "ScrollPos";
@@ -76,13 +74,13 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
             mTwoPane = true;
         }
 
-        dogContentFragment = DogContentFragment.newInstance(getSupportFragmentManager());
+        DogContentFragment.newInstance(getSupportFragmentManager());
 
         if (savedInstanceState != null) {
             scrollPosition = savedInstanceState.getInt(SCROLL_POSITION);
         }
 
-        recyclerView = findViewById(R.id.breed_list);
+        RecyclerView recyclerView = findViewById(R.id.breed_list);
         assert recyclerView != null;
         setupRecyclerView(recyclerView);
     }
@@ -91,12 +89,6 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putInt(SCROLL_POSITION, scrollPosition);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        recyclerView.getLayoutManager().scrollToPosition(scrollPosition);
     }
 
     @Override
@@ -115,11 +107,8 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
 
     private void setUpImageLoader() {
         if (!ImageLoader.getInstance().isInited()) {
-            Log.d("InitL", "needs init");
-
             ImageLoaderConfiguration config = new ImageLoaderConfiguration.Builder(getApplicationContext())
                     .denyCacheImageMultipleSizesInMemory()
-                    .writeDebugLogs()
                     .memoryCacheSize(25000000)
                     .build();
             ImageLoader.getInstance().init(config);
@@ -148,7 +137,7 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
     public static class SimpleItemRecyclerViewAdapter
             extends RecyclerView.Adapter<SimpleItemRecyclerViewAdapter.ViewHolder> {
 
-        private final BreedListActivity mParentActivity;
+        private final AppCompatActivity mParentActivity;
         private final List<DogContentFragment.DogItem> mValues;
         private final boolean mTwoPane;
 
@@ -175,7 +164,7 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
             }
         };
 
-        SimpleItemRecyclerViewAdapter(BreedListActivity parent,
+        SimpleItemRecyclerViewAdapter(AppCompatActivity parent,
                                       List<DogContentFragment.DogItem> items,
                                       boolean twoPane) {
             mValues = items;
@@ -203,7 +192,7 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
             holder.itemView.setOnClickListener(mOnClickListener);
         }
 
-        private void updateThumbnail(ViewHolder holder, final String url) {
+        private void updateThumbnail(ViewHolder holder, String url) {
             if (url != null) {
                 ImageLoader imageLoader = ImageLoader.getInstance();
                 List<Bitmap> bitmaps = MemoryCacheUtils.findCachedBitmapsForImageUri(url, imageLoader.getMemoryCache());
@@ -212,10 +201,7 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
                 // Use the cached image
                 if (loadedImage != null) {
                     holder.mContentView.setImageBitmap(loadedImage);
-                    Log.d("Thumbnail", "using cached image");
                 } else {
-                    Log.d("Thumbnail", "fetching image: "+url);
-
                     // Download the image url and load into the target view
                     DisplayImageOptions thumbOptions = new DisplayImageOptions.Builder()
                             .cacheInMemory(true)
@@ -223,7 +209,9 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
                             .bitmapConfig(Bitmap.Config.RGB_565)
                             .build();
 
-                    imageLoader.displayImage(url, holder.mContentView,
+                    imageLoader.displayImage(
+                            url,
+                            new ImageViewAware(holder.mContentView, false),
                             thumbOptions);
                 }
             }
