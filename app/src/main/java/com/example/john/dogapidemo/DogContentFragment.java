@@ -39,6 +39,8 @@ interface DownloadCallback {
  */
 interface DetailDownloadCallback {
     void updateDogWithRandomImage();
+
+    void updateSubBreedList(String[] subBreeds);
 }
 
 /**
@@ -51,12 +53,16 @@ public class DogContentFragment extends Fragment {
     private static final String[] URLS = {
             "https://dog.ceo/api/breeds/list/all",
             "https://dog.ceo/api/breed/%s/images",
-            "https://dog.ceo/api/breed/%s/images/random"
+            "https://dog.ceo/api/breed/%s/images/random",
+            "https://dog.ceo/api/breed/%s/list",
+            "https://dog.ceo/api/breed/%s/%s/images/random"
         };
 
     private static final int BREEDS = 0;
     private static final int BREED_ALL_IMAGES = 1;
     private static final int BREED_RANDOM_IMAGE = 2;
+    private static final int BREED_LIST_SUB_BREEDS = 3;
+    private static final int BREED_SUB_RANDOM_IMAGE = 4;
 
     private DownloadCallback downloadCallback;
     private WeakReference<DetailDownloadCallback> detailDownloadCallback;
@@ -94,6 +100,24 @@ public class DogContentFragment extends Fragment {
         ));
     }
 
+    void loadSubBreedList(DogItem dog, @NonNull WeakReference<DetailDownloadCallback>
+            detailDownloadCallback) {
+
+        this.detailDownloadCallback = detailDownloadCallback;
+        asyncTasks.add(new RequestDogTask(new WeakReference<>(this)).execute(
+                new DogRequestItem(dog, BREED_LIST_SUB_BREEDS)
+        ));
+    }
+
+    void loadSubBreedRandomImageUrl(DogItem dog, String subbreed,
+            @NonNull WeakReference<DetailDownloadCallback> detailDownloadCallback) {
+
+        this.detailDownloadCallback = detailDownloadCallback;
+        asyncTasks.add(new RequestDogTask(new WeakReference<>(this)).execute(
+                new DogRequestItem(dog, BREED_SUB_RANDOM_IMAGE, subbreed)
+        ));
+    }
+
     private void handleResponse(DogRequestItem responseItem, Object result) {
 
         switch (responseItem.requestIndex) {
@@ -127,6 +151,7 @@ public class DogContentFragment extends Fragment {
                 break;
 
             case BREED_RANDOM_IMAGE:
+            case BREED_SUB_RANDOM_IMAGE:
                 if (detailDownloadCallback != null) {
                     DogItem dog = responseItem.dogItem;
 
@@ -144,6 +169,22 @@ public class DogContentFragment extends Fragment {
                 }
                 break;
 
+            case BREED_LIST_SUB_BREEDS:
+                if (detailDownloadCallback != null) {
+                    DogItem dog = responseItem.dogItem;
+
+                    assert dog != null;
+
+                    // WeakReference, to check if callback is sent to GC
+                    DetailDownloadCallback callback = detailDownloadCallback.get();
+
+                    if (callback != null) {
+                        callback.updateSubBreedList(((String[]) result));
+                        return;
+                    }
+                }
+                break;
+
             default:
                 return;
         }
@@ -155,8 +196,15 @@ public class DogContentFragment extends Fragment {
         switch (index) {
             case BREED_ALL_IMAGES:
             case BREED_RANDOM_IMAGE:
+            case BREED_LIST_SUB_BREEDS:
                 assert dogRequestItem.dogItem != null;
                 return String.format(URLS[index], dogRequestItem.dogItem.title.toLowerCase());
+
+            case BREED_SUB_RANDOM_IMAGE:
+                assert  dogRequestItem.dogItem != null;
+                assert dogRequestItem.aux != null;
+                return String.format(URLS[index], dogRequestItem.dogItem.title.toLowerCase(),
+                        dogRequestItem.aux);
 
             default:
                 return URLS[index];
@@ -197,7 +245,6 @@ public class DogContentFragment extends Fragment {
     public void onDetach() {
         super.onDetach();
         downloadCallback = null;
-        Log.d("Myfragment", "detach");
     }
 
     @Override
@@ -260,6 +307,11 @@ public class DogContentFragment extends Fragment {
                 word.substring(1);
     }
 
+    public static String makeTitleCase(String word) {
+        return String.valueOf(Character.toTitleCase(word.charAt(0))) +
+                word.substring(1);
+    }
+
     /**
      * A dummy item representing a piece of content.
      */
@@ -317,10 +369,18 @@ public class DogContentFragment extends Fragment {
     static class DogRequestItem {
         final DogItem dogItem;
         final int requestIndex;
+        final Object aux;
 
-        DogRequestItem(@Nullable DogItem dogItem, int requestIndex) {
+        DogRequestItem(DogItem dogItem, int requestIndex) {
             this.dogItem = dogItem;
             this.requestIndex = requestIndex;
+            this.aux = null;
+        }
+
+        DogRequestItem(@Nullable DogItem dogItem, int requestIndex, Object aux) {
+            this.dogItem = dogItem;
+            this.requestIndex = requestIndex;
+            this.aux = aux;
         }
     }
 
@@ -398,8 +458,6 @@ public class DogContentFragment extends Fragment {
 
             try {
                 jsonReader = new JsonReader(new InputStreamReader(in,"UTF-8"));
-
-                // TODO: write a reader generalizing to read common structure between the different api calls
                 String name;
 
                 jsonReader.beginObject();
@@ -448,7 +506,22 @@ public class DogContentFragment extends Fragment {
                                     break;
 
                                 case BREED_RANDOM_IMAGE:
+                                case BREED_SUB_RANDOM_IMAGE:
                                     result = jsonReader.nextString();
+                                    break;
+
+                                case BREED_LIST_SUB_BREEDS:
+                                    ArrayList<String> subBreeds = new ArrayList<>(20);
+
+                                    jsonReader.beginArray();
+                                    while (jsonReader.hasNext()) {
+                                        // Add the name as breed
+                                        subBreeds.add(jsonReader.nextString());
+                                    }
+                                    jsonReader.endArray();
+
+                                    result = new String[subBreeds.size()];
+                                    subBreeds.toArray((String[])result);
                                     break;
                             }
                             break;
@@ -457,7 +530,7 @@ public class DogContentFragment extends Fragment {
                 jsonReader.endObject();
                 return result;
 
-            } catch (IOException e) {
+            } catch (IOException | IllegalStateException e) {
 
                 String message = e.getMessage();
 

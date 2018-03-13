@@ -4,5 +4,6 @@
     <string name="title_breed_detail">Breed Detail</string>
     <string name="breed_detail_feature_graphic_constraint">w,3:4</string>
     <string name="random_photo_btn_text">Random Photo</string>
+    <string name="detailSubbreed">Subbreed</string>
     <bool name="expandedToolBarLayout">true</bool>
 </resources>

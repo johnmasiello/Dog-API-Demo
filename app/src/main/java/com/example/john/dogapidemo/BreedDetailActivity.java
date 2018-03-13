@@ -28,13 +28,15 @@ public class BreedDetailActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
 
         FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own detail action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
+        if (fab != null) {
+            fab.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Snackbar.make(view, "Replace with your own detail action", Snackbar.LENGTH_LONG)
+                            .setAction("Action", null).show();
+                }
+            });
+        }
 
         // Show the Up button in the action bar.
         ActionBar actionBar = getSupportActionBar();
@@ -52,9 +54,6 @@ public class BreedDetailActivity extends AppCompatActivity {
         // http://developer.android.com/guide/components/fragments.html
         //
         if (savedInstanceState == null) {
-
-            FragmentManager fm = getSupportFragmentManager();
-
             // Create the detail fragment and add it to the activity
             // using a fragment transaction.
             Bundle arguments = new Bundle();
@@ -62,17 +61,11 @@ public class BreedDetailActivity extends AppCompatActivity {
                     getIntent().getStringExtra(BreedDetailFragment.ARG_ITEM_ID));
             BreedDetailFragment fragment = new BreedDetailFragment();
             fragment.setArguments(arguments);
-
-            // Connect the detail fragment to the headless-data fragment
-            fragment.setTargetFragment(DogContentFragment.getInstance(fm), 0);
-
-            fm.beginTransaction()
+            getSupportFragmentManager().beginTransaction()
                     .add(R.id.breed_detail_container, fragment, BreedDetailFragment.BREED_DETAIL_FRAGMENT)
                     .commit();
         }
     }
-
-    // todo create menu options to show more breeds
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {

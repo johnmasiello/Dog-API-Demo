@@ -147,17 +147,11 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
             public void onClick(View view) {
                 DogContentFragment.DogItem item = (DogContentFragment.DogItem) view.getTag();
                 if (mTwoPane) {
-                    FragmentManager fm = mParentActivity.getSupportFragmentManager();
-
                     Bundle arguments = new Bundle();
                     arguments.putString(BreedDetailFragment.ARG_ITEM_ID, item.id);
                     BreedDetailFragment fragment = new BreedDetailFragment();
                     fragment.setArguments(arguments);
-
-                    // Connect the detail fragment to the headless-data fragment
-                    fragment.setTargetFragment(DogContentFragment.getInstance(fm), 0);
-
-                    fm.beginTransaction()
+                    mParentActivity.getSupportFragmentManager().beginTransaction()
                             .replace(R.id.breed_detail_container, fragment, BreedDetailFragment.BREED_DETAIL_FRAGMENT)
                             .commit();
                 } else {
