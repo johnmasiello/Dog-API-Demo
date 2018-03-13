@@ -34,18 +34,22 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
      */
     public static final String ARG_ITEM_ID = "item_id";
 
+    // Save State
+    public static final String SUBBREED_ARRAY_KEY = "subbreeds_arr";
     public static final String SUBBREED_KEY = "subbreed";
 
-    public static final String LARGE_IMAGE_URI_SUFFIX = "_large";
-
+    // Fetch the fragment from Fragment Manager
     public static final String BREED_DETAIL_FRAGMENT = "Breed_Detail";
 
+    // Manage UI and data
+    public static final String LARGE_IMAGE_URI_SUFFIX = "_large";
     public static final String NO_SUBBREED = "None";
 
     // Data Variables
     private DogContentFragment.DogItem mItem;
     private ImageView dogPhoto;
     private String[] subBreeds;
+    private String subbreed = null;
 
     // Helper Variables
     private SubMenu subBreedMenu;
@@ -76,14 +80,16 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
         setRetainInstance(true);
 
         if (savedInstanceState != null) {
-            subBreeds = savedInstanceState.getStringArray(SUBBREED_KEY);
+            subBreeds = savedInstanceState.getStringArray(SUBBREED_ARRAY_KEY);
+            subbreed = savedInstanceState.getString(SUBBREED_KEY);
         }
     }
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putStringArray(SUBBREED_KEY, subBreeds);
+        outState.putStringArray(SUBBREED_ARRAY_KEY, subBreeds);
+        outState.putString(SUBBREED_KEY, subbreed);
     }
 
     @Override
@@ -93,7 +99,7 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
         android.app.Activity activity = this.getActivity();
         appBarLayout = activity.findViewById(R.id.toolbar_layout);
         if (appBarLayout != null) {
-            appBarLayout.setTitle(mItem.title);
+            appBarLayout.setTitle(makeTitleBarTitle());
 
             final DetailDownloadCallback ddc = this;
             DogContentFragment fragment = DogContentFragment.getInstance(getFragmentManager());
@@ -151,7 +157,12 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
                 DogContentFragment fragment = DogContentFragment.getInstance(getFragmentManager());
 
                 if (fragment != null) {
-                    fragment.loadBreedRandomImageUrl(mItem, new WeakReference<>(ddc));
+                    if (subbreed == null) {
+                        fragment.loadBreedRandomImageUrl(mItem, new WeakReference<>(ddc));
+                    } else {
+                        fragment.loadSubBreedRandomImageUrl(mItem, subbreed,
+                                new WeakReference<>(ddc));
+                    }
                 }
             }
         });
@@ -230,12 +241,11 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getGroupId() == SUBBREED_GROUP_ID) {
             int position = item.getOrder();
-            String subbreed = subBreeds[position];
+            subbreed = subBreeds[position];
 
             // Update toolbar Title
             if (appBarLayout != null) {
-                appBarLayout.setTitle(mItem.title+ ", " +
-                        DogContentFragment.makeTitleCase(subbreed));
+                appBarLayout.setTitle(makeTitleBarTitle());
             }
 
             // Update Photo
@@ -249,5 +259,10 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
         } else {
             return super.onOptionsItemSelected(item);
         }
+    }
+
+    private String makeTitleBarTitle() {
+        return subbreed != null ? mItem.title + ", " + DogContentFragment.makeTitleCase(subbreed) :
+                mItem.title;
     }
 }
