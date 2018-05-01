@@ -576,7 +576,6 @@ public class DogContentFragment extends Fragment {
                 // Now clean up
                 fragment.asyncTasks.remove(this);
             }
-
         }
     }
 }
