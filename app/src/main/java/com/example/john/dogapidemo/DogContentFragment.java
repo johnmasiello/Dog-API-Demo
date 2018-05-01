@@ -327,6 +327,7 @@ public class DogContentFragment extends Fragment {
         String title;
         String url;
         String randomUrl;
+        float rating = 2.5f;
 
         DogItem(String id, String title, String url) {
             this.id = id;

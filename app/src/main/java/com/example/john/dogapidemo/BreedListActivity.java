@@ -15,7 +15,9 @@ import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.widget.ImageView;
+import android.widget.RatingBar;
 import android.widget.TextView;
 
 import com.nostra13.universalimageloader.core.DisplayImageOptions;
@@ -137,6 +139,12 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
             @Override
             public void onClick(View view) {
                 DogContentFragment.DogItem item = (DogContentFragment.DogItem) view.getTag();
+
+                if (view.getId() == R.id.rating_bar) {
+                    // Consume the click
+                    return;
+                }
+
                 if (mTwoPane) {
                     Bundle arguments = new Bundle();
                     arguments.putString(BreedDetailFragment.ARG_ITEM_ID, item.id);
@@ -151,6 +159,15 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
                     intent.putExtra(BreedDetailFragment.ARG_ITEM_ID, item.id);
 
                     context.startActivity(intent);
+                }
+            }
+        };
+
+        private final RatingBar.OnRatingBarChangeListener mOnRatingBarChangeListener = new RatingBar.OnRatingBarChangeListener() {
+            @Override
+            public void onRatingChanged(RatingBar ratingBar, float rating, boolean fromUser) {
+                if (fromUser) {
+                    ((DogContentFragment.DogItem) ratingBar.getTag()).rating = rating;
                 }
             }
         };
@@ -174,6 +191,7 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
         public void onBindViewHolder(final ViewHolder holder, int position) {
             // todo customize binding data to the views in the list item
             holder.mIdView.setText(mValues.get(position).title);
+            holder.mRatingBar.setRating(mValues.get(position).rating);
 
             String url = mValues.get(position).url;
             updateThumbnail(holder, url);
@@ -181,6 +199,8 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
             // Set the data item to the view's holder
             holder.itemView.setTag(mValues.get(position));
             holder.itemView.setOnClickListener(mOnClickListener);
+            holder.mRatingBar.setOnRatingBarChangeListener(mOnRatingBarChangeListener);
+            holder.mRatingBar.setTag(mValues.get(position));
         }
 
         private void updateThumbnail(ViewHolder holder, String url) {
@@ -231,11 +251,13 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
             // todo customize to handle the view outlets of the list item layout
             final TextView mIdView;
             final ImageView mContentView;
+            final RatingBar mRatingBar;
 
             ViewHolder(View view) {
                 super(view);
                 mIdView = view.findViewById(R.id.item_name);
                 mContentView = view.findViewById(R.id.item_thumb);
+                mRatingBar = view.findViewById(R.id.rating_bar);
             }
         }
     }

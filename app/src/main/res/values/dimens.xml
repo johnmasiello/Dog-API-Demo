@@ -9,4 +9,5 @@
     <dimen name="dog_image_padding">16dp</dimen>
     <dimen name="next_photo_btn_margin">16dp</dimen>
     <dimen name="next_photo_btn_padding">22dp</dimen>
+    <dimen name="rating_margin">40dp</dimen>
 </resources>
