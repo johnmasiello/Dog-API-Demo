@@ -47,18 +47,18 @@ Respond to state of application memory
          
 
 
-### See the Breeds
+## See the Breeds
 Rate your favorites!
 
 ![Home screen - List View of Master Breeds](images/Screenshot_20180507-145352_small.png)
 
-### Fetch random photos of a Breed
+## Fetch random photos of a Breed
 
 ![BullDog - Random One](images/Screenshot_20180507-145624_small.png)
 
 ![BullDog - Random Two](images/Screenshot_20180507-145659_small.png)
 
-### Refine the content by choosing Subbreed
+## Refine the content by choosing Subbreed
 
 ![BullDog, Boston - Random One](images/Screenshot_20180507-145725_small.png)
 
