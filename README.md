@@ -1,5 +1,5 @@
 # Dog API Demo
-### A demo of Name Days API
+### A demo of Dog API
 This app demonstrates GET requests to expose the [DOG API](https://dog.ceo/dog-api/)
 
 #### Android
