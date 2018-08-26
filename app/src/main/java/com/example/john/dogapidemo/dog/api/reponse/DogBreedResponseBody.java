@@ -23,4 +23,6 @@ public class DogBreedResponseBody {
     public List<String> getUrls() {
         return urls;
     }
+
+
 }

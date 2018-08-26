@@ -15,12 +15,15 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.RatingBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.john.dogapidemo.R;
+import com.example.john.dogapidemo.core.DogApplication;
+import com.example.john.dogapidemo.dog.api.DogRepository;
+import com.example.john.dogapidemo.dog.api.DownloadCallback;
 import com.example.john.dogapidemo.dog.api.model.DogItem;
 import com.nostra13.universalimageloader.core.DisplayImageOptions;
 import com.nostra13.universalimageloader.core.ImageLoader;
-import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
 import com.nostra13.universalimageloader.core.assist.ImageScaleType;
 import com.nostra13.universalimageloader.core.imageaware.ImageViewAware;
 import com.nostra13.universalimageloader.utils.MemoryCacheUtils;
@@ -44,6 +47,7 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
     private boolean mTwoPane;
     private SimpleItemRecyclerViewAdapter adapter;
     private int scrollPosition = 0;
+    private DogRepository dogRepository;
 
     private final static String SCROLL_POSITION = "ScrollPos";
 
@@ -52,7 +56,8 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_breed_list);
 
-        setUpImageLoader();
+        // Force the repo to be created, if not already created
+        dogRepository = DogApplication.get(this).fetchDogRepository();
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -78,6 +83,18 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        dogRepository.registerDownloadCallback(this);
+    }
+
+    @Override
+    protected void onStop() {
+        dogRepository.unregisterDownloadCallback(this);
+        super.onStop();
+    }
+
+    @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putInt(SCROLL_POSITION, scrollPosition);
@@ -93,21 +110,17 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
     @Override
     public void updateDogItem_URL(int position) {
         if (adapter != null) {
-            adapter.notifyItemChanged(position, DogContentFragment.ITEMS.get(position).getUrl());
+            adapter.notifyItemChanged(position, DogRepository.ITEMS.get(position).getUrl());
         }
     }
 
-    private void setUpImageLoader() {
-        if (!ImageLoader.getInstance().isInited()) {
-            ImageLoaderConfiguration config = new ImageLoaderConfiguration.Builder(getApplicationContext())
-                    .memoryCacheSize(25000000)
-                    .build();
-            ImageLoader.getInstance().init(config);
-        }
+    @Override
+    public void reportApiFailure(Throwable throwable) {
+        Toast.makeText(this, throwable.getMessage(), Toast.LENGTH_LONG).show();
     }
 
     private void setupRecyclerView(@NonNull RecyclerView recyclerView) {
-        this.adapter = new SimpleItemRecyclerViewAdapter(this, DogContentFragment.ITEMS, mTwoPane);
+        this.adapter = new SimpleItemRecyclerViewAdapter(this, DogRepository.ITEMS, mTwoPane);
         recyclerView.setAdapter(adapter);
 
         recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
@@ -187,7 +200,6 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
 
         @Override
         public void onBindViewHolder(final ViewHolder holder, int position) {
-            // todo customize binding data to the views in the list item
             holder.mIdView.setText(mValues.get(position).getTitle());
             holder.mRatingBar.setRating(mValues.get(position).getRating());
 
@@ -246,7 +258,6 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
         }
 
         class ViewHolder extends RecyclerView.ViewHolder {
-            // todo customize to handle the view outlets of the list item layout
             final TextView mIdView;
             final ImageView mContentView;
             final RatingBar mRatingBar;

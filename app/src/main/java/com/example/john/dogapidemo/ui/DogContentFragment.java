@@ -1,15 +1,14 @@
 package com.example.john.dogapidemo.ui;
 
-import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import android.content.Context;
 import android.os.AsyncTask;
 import android.util.JsonReader;
 import android.util.Log;
 
+import com.example.john.dogapidemo.dog.api.DetailDownloadCallback;
 import com.example.john.dogapidemo.dog.api.model.DogItem;
 
 import java.io.IOException;
@@ -19,30 +18,8 @@ import java.lang.ref.WeakReference;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
-
-/**
- * An interface to implement by any activity that uses DogContentFragment
- */
-interface DownloadCallback {
-
-    void updateBreeds();
-
-    void updateDogItem_URL(int position);
-}
-
-/**
- * An interface to implement by any Detail fragment that uses DogContentFragment
- */
-interface DetailDownloadCallback {
-    void updateDogWithRandomImage();
-
-    void updateSubBreedList(String[] subBreeds);
-}
-
+// TODO finish moving the functionality of this class to DogApi calls using Retrofit 2
 /**
  * A headless fragment that loads the content for DOG API. It is reusable for each request.
  *
@@ -64,31 +41,11 @@ public class DogContentFragment extends Fragment {
     private static final int BREED_LIST_SUB_BREEDS = 3;
     private static final int BREED_SUB_RANDOM_IMAGE = 4;
 
-    private DownloadCallback downloadCallback;
     private WeakReference<DetailDownloadCallback> detailDownloadCallback;
     private ArrayList<AsyncTask> asyncTasks;
 
     public DogContentFragment() {
         asyncTasks = new ArrayList<>(100);
-    }
-
-    /**
-     * Use DOG_API to load endpoint to list all master breeds
-     */
-    void loadBreeds() {
-        asyncTasks.add(new RequestDogTask(new WeakReference<>(this)).execute(
-                new DogRequestItem(null, BREEDS)
-        ));
-    }
-
-    /**
-     * Use DOG_API to load and endpoint for a graphic
-     * @param dog the reference to update dog.url when task finishes
-     */
-    void loadBreedImagesUrl(DogItem dog) {
-        asyncTasks.add(new RequestDogTask(new WeakReference<>(this)).executeOnExecutor(
-                AsyncTask.THREAD_POOL_EXECUTOR,
-                new DogRequestItem(dog, BREED_ALL_IMAGES)));
     }
 
     void loadBreedRandomImageUrl(DogItem dog, @NonNull WeakReference<DetailDownloadCallback>
@@ -122,32 +79,7 @@ public class DogContentFragment extends Fragment {
 
         switch (responseItem.requestIndex) {
             case BREEDS:
-                if (downloadCallback != null) {
-                    if (result instanceof ArrayList) {
-                        ArrayList array = ((ArrayList) result);
-
-                        for (int i = 0; i < array.size(); i++) {
-                            addDogItemIfDoesNotExist((String) array.get(i));
-                        }
-
-                        downloadCallback.updateBreeds();
-                        return;
-                    }
-                }
-                break;
-
             case BREED_ALL_IMAGES:
-                if (downloadCallback != null) {
-                    assert responseItem.dogItem != null;
-                    responseItem.dogItem.setUrl((String) result);
-
-                    int position = findPosition(responseItem.dogItem);
-
-                    if (position >= 0) {
-                        downloadCallback.updateDogItem_URL(position);
-                    }
-                    return;
-                }
                 break;
 
             case BREED_RANDOM_IMAGE:
@@ -223,31 +155,6 @@ public class DogContentFragment extends Fragment {
     }
 
     @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        if (context instanceof DownloadCallback) {
-            downloadCallback = (DownloadCallback) context;
-        }
-    }
-
-    @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-    }
-
-    @Override
-    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-        loadBreeds();
-    }
-
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        downloadCallback = null;
-    }
-
-    @Override
     public void onDestroy() {
         if (asyncTasks != null) {
             for (AsyncTask task : asyncTasks) {
@@ -255,56 +162,6 @@ public class DogContentFragment extends Fragment {
             }
         }
         super.onDestroy();
-    }
-
-    /**
-     * An array of sample (dummy) items. Items must be added synchronously
-     */
-    public static final List<DogItem> ITEMS = new ArrayList<>();
-
-    /**
-     * A map of sample (dummy) items, by ID.
-     */
-    public static final Map<String, DogItem> ITEM_MAP = new HashMap<>();
-
-    /**
-     * <p>Wraps storing the item in both the hash map and the array list, the latter of which backs the array adapter</p>
-     * <p>Continues updating the item using DOG API, if the item is not fully initialized, ie the thumbnail url</p>
-     * @param title Title or breed of the dog
-     */
-    private void addDogItemIfDoesNotExist(String title) {
-
-        DogItem dog;
-
-        if ( !ITEM_MAP.containsKey(title) ) {
-
-            dog = createDogItem(title);
-            ITEM_MAP.put(dog.id, dog);
-            ITEMS.add(dog);
-
-        } else {
-            dog = ITEM_MAP.get(title);
-        }
-
-        // Update item using DOG API
-        if (dog.getUrl() == null) {
-            loadBreedImagesUrl(dog);
-        }
-    }
-
-    private DogItem createDogItem(String title) {
-        String properTitle = toTitleCase(title);
-
-        return new DogItem(title, properTitle, null);
-    }
-
-    int findPosition(DogItem dogItem) {
-        return ITEMS.indexOf(dogItem);
-    }
-
-    private String toTitleCase(String word) {
-        return String.valueOf(Character.toTitleCase(word.charAt(0))) +
-                word.substring(1);
     }
 
     public static String makeTitleCase(String word) {

@@ -2,11 +2,14 @@ package com.example.john.dogapidemo.core;
 
 import android.app.Application;
 import android.content.ComponentCallbacks2;
+import android.content.Context;
 
 import com.example.john.dogapidemo.BuildConfig;
 import com.example.john.dogapidemo.dog.api.DogApi;
+import com.example.john.dogapidemo.dog.api.DogRepository;
 import com.google.gson.Gson;
 import com.nostra13.universalimageloader.core.ImageLoader;
+import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
 
 import java.util.concurrent.TimeUnit;
 
@@ -25,6 +28,26 @@ public class DogApplication extends Application implements ComponentCallbacks2 {
     private final HttpUrl endpoint = HttpUrl.parse("https://dog.ceo/api/");
 
     private DogApi dogApi;
+    private DogRepository dogRepository;
+
+    public static DogApplication get(Context context) {
+        return (DogApplication) context.getApplicationContext();
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        setUpImageLoader();
+    }
+
+    private void setUpImageLoader() {
+        if (!ImageLoader.getInstance().isInited()) {
+            ImageLoaderConfiguration config = new ImageLoaderConfiguration.Builder(getApplicationContext())
+                    .memoryCacheSize(25000000)
+                    .build();
+            ImageLoader.getInstance().init(config);
+        }
+    }
 
     public DogApi fetchDogApi() {
         if (dogApi == null) {
@@ -45,6 +68,13 @@ public class DogApplication extends Application implements ComponentCallbacks2 {
                     .create(DogApi.class);
         }
         return dogApi;
+    }
+
+    public DogRepository fetchDogRepository() {
+        if (dogRepository == null) {
+            dogRepository = new DogRepository(fetchDogApi());
+        }
+        return dogRepository;
     }
 
     @Override

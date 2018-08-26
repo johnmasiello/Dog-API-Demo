@@ -14,6 +14,8 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import com.example.john.dogapidemo.R;
+import com.example.john.dogapidemo.dog.api.DetailDownloadCallback;
+import com.example.john.dogapidemo.dog.api.DogRepository;
 import com.example.john.dogapidemo.dog.api.model.DogItem;
 import com.nostra13.universalimageloader.core.DisplayImageOptions;
 import com.nostra13.universalimageloader.core.ImageLoader;
@@ -73,7 +75,7 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
             // Load the dummy title specified by the fragment
             // arguments. In a real-world scenario, use a Loader
             // to load title from a title provider.
-            mItem = DogContentFragment.ITEM_MAP.get(getArguments().getString(ARG_ITEM_ID));
+            mItem = DogRepository.ITEM_MAP.get(getArguments().getString(ARG_ITEM_ID));
         }
 
         setHasOptionsMenu(true);
@@ -111,8 +113,6 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
             }
         }
 
-
-        // todo customize breed detail view
         View rootView = inflater.inflate(R.layout.breed_detail, container, false);
         dogPhoto = rootView.findViewById(R.id.breed_detail);
 

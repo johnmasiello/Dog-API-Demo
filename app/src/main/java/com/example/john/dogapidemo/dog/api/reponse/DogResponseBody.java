@@ -1,40 +1,40 @@
 package com.example.john.dogapidemo.dog.api.reponse;
 
-import com.google.gson.annotations.Expose;
-import com.google.gson.annotations.SerializedName;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class DogResponseBody {
-    @SerializedName("status")
-    @Expose
     private final String status;
+    private final List<String> breeds;
 
-    @SerializedName("message")
-    @Expose
-    private final List<Data> message;
-
-    public DogResponseBody(String status, List<Data> message) {
-        this.status = status;
-        this.message = message;
-    }
-
-    /**
-     *  @return a List of the breed names, which are the fields in the response body
-     *  to the DogApi
-     */
-    public List<String> fetchBreeds() {
-        List<String> breeds = new ArrayList<>();
-        if (message != null) {
-            for (Data datum : message) {
-                breeds.add(datum.getKey());
+    public DogResponseBody(String json) {
+        breeds = new ArrayList<>();
+        String status;
+        JSONObject oJson;
+        try {
+            oJson = new JSONObject(json);
+            status = oJson.getString("status");
+            JSONObject breeds = oJson.getJSONObject("message");
+            JSONArray arrJson = breeds.names();
+            for (int i = 0; i < arrJson.length(); i++) {
+                this.breeds.add(arrJson.getString(i));
             }
+
+        } catch (JSONException ignore) {
+            status = null;
         }
-        return breeds;
+        this.status = status;
     }
 
     public String getStatus() {
         return status;
+    }
+
+    public List<String> getBreeds() {
+        return breeds;
     }
 }
