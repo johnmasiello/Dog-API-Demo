@@ -1,4 +1,4 @@
-package com.example.john.dogapidemo;
+package com.example.john.dogapidemo.ui;
 
 import android.content.Context;
 import android.content.Intent;
@@ -16,6 +16,8 @@ import android.widget.ImageView;
 import android.widget.RatingBar;
 import android.widget.TextView;
 
+import com.example.john.dogapidemo.R;
+import com.example.john.dogapidemo.dog.api.model.DogItem;
 import com.nostra13.universalimageloader.core.DisplayImageOptions;
 import com.nostra13.universalimageloader.core.ImageLoader;
 import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
@@ -91,7 +93,7 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
     @Override
     public void updateDogItem_URL(int position) {
         if (adapter != null) {
-            adapter.notifyItemChanged(position, DogContentFragment.ITEMS.get(position).url);
+            adapter.notifyItemChanged(position, DogContentFragment.ITEMS.get(position).getUrl());
         }
     }
 
@@ -127,14 +129,14 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
             extends RecyclerView.Adapter<SimpleItemRecyclerViewAdapter.ViewHolder> {
 
         private final AppCompatActivity mParentActivity;
-        private final List<DogContentFragment.DogItem> mValues;
+        private final List<DogItem> mValues;
         private final boolean mTwoPane;
 
 
         private final View.OnClickListener mOnClickListener = new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                DogContentFragment.DogItem item = (DogContentFragment.DogItem) view.getTag();
+                DogItem item = (DogItem) view.getTag();
 
                 if (view.getId() == R.id.rating_bar) {
                     // Consume the click
@@ -163,13 +165,13 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
             @Override
             public void onRatingChanged(RatingBar ratingBar, float rating, boolean fromUser) {
                 if (fromUser) {
-                    ((DogContentFragment.DogItem) ratingBar.getTag()).rating = rating;
+                    ((DogItem) ratingBar.getTag()).setRating(rating);
                 }
             }
         };
 
         SimpleItemRecyclerViewAdapter(AppCompatActivity parent,
-                                      List<DogContentFragment.DogItem> items,
+                                      List<DogItem> items,
                                       boolean twoPane) {
             mValues = items;
             mParentActivity = parent;
@@ -186,10 +188,10 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
         @Override
         public void onBindViewHolder(final ViewHolder holder, int position) {
             // todo customize binding data to the views in the list item
-            holder.mIdView.setText(mValues.get(position).title);
-            holder.mRatingBar.setRating(mValues.get(position).rating);
+            holder.mIdView.setText(mValues.get(position).getTitle());
+            holder.mRatingBar.setRating(mValues.get(position).getRating());
 
-            String url = mValues.get(position).url;
+            String url = mValues.get(position).getUrl();
             updateThumbnail(holder, url);
 
             // Set the data item to the view's holder

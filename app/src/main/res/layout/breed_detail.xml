@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.example.john.dogapidemo.BreedDetailFragment">
+    tools:context="com.example.john.dogapidemo.ui.BreedDetailFragment">
 
     <ImageView
         android:id="@+id/breed_detail"

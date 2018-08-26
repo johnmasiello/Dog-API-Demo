@@ -1,4 +1,4 @@
-package com.example.john.dogapidemo;
+package com.example.john.dogapidemo.ui;
 
 import android.graphics.Bitmap;
 import android.support.design.widget.CollapsingToolbarLayout;
@@ -13,6 +13,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
+import com.example.john.dogapidemo.R;
+import com.example.john.dogapidemo.dog.api.model.DogItem;
 import com.nostra13.universalimageloader.core.DisplayImageOptions;
 import com.nostra13.universalimageloader.core.ImageLoader;
 import com.nostra13.universalimageloader.core.listener.SimpleImageLoadingListener;
@@ -46,7 +48,7 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
     public static final String NO_SUBBREED = "None";
 
     // Data Variables
-    private DogContentFragment.DogItem mItem;
+    private DogItem mItem;
     private ImageView dogPhoto;
     private String[] subBreeds;
     private String subbreed = null;
@@ -176,7 +178,7 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
         // Remove the large image from the memory cache
         ImageLoader imageLoader = ImageLoader.getInstance();
         if (imageLoader.isInited() && mItem != null) {
-            imageLoader.getMemoryCache().remove(mItem.url + LARGE_IMAGE_URI_SUFFIX);
+            imageLoader.getMemoryCache().remove(mItem.getUrl() + LARGE_IMAGE_URI_SUFFIX);
             mItem.clearRandomURlFromCache();
         }
         super.onDestroy();
@@ -184,7 +186,7 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
 
     @Override
     public void updateDogWithRandomImage() {
-        String url = mItem.randomUrl;
+        String url = mItem.getRandomUrl();
 
         if (url != null) {
             ImageLoader imageLoader = ImageLoader.getInstance();
@@ -262,7 +264,7 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
     }
 
     private String makeTitleBarTitle() {
-        return subbreed != null ? mItem.title + ", " + DogContentFragment.makeTitleCase(subbreed) :
-                mItem.title;
+        return subbreed != null ? mItem.getTitle() + ", " + DogContentFragment.makeTitleCase(subbreed) :
+                mItem.getTitle();
     }
 }

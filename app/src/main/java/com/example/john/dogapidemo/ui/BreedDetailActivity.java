@@ -1,16 +1,14 @@
-package com.example.john.dogapidemo;
+package com.example.john.dogapidemo.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
-import android.support.v4.app.FragmentManager;
 import android.support.v7.widget.Toolbar;
-import android.view.View;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.app.ActionBar;
 import android.support.v4.app.NavUtils;
 import android.view.MenuItem;
+
+import com.example.john.dogapidemo.R;
 
 /**
  * An activity representing a single Breed detail screen. This

@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.INTERNET"/>
 
     <application
-        android:name=".DogApplication"
+        android:name=".core.DogApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_label"
@@ -14,7 +14,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
-            android:name=".BreedListActivity"
+            android:name=".ui.BreedListActivity"
             android:label="@string/app_label"
             android:theme="@style/AppTheme.NoActionBar"
             >
@@ -25,14 +25,11 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".BreedDetailActivity"
+            android:name=".ui.BreedDetailActivity"
             android:label="@string/title_breed_detail"
-            android:parentActivityName=".BreedListActivity"
+            android:parentActivityName=".ui.BreedListActivity"
             android:theme="@style/AppTheme.NoActionBar"
             tools:targetApi="jelly_bean">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="com.example.john.dogapidemo.BreedListActivity" />
         </activity>
     </application>
 

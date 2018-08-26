@@ -1,4 +1,4 @@
-package com.example.john.dogapidemo;
+package com.example.john.dogapidemo.ui;
 
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -10,7 +10,7 @@ import android.os.AsyncTask;
 import android.util.JsonReader;
 import android.util.Log;
 
-import com.nostra13.universalimageloader.core.ImageLoader;
+import com.example.john.dogapidemo.dog.api.model.DogItem;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -139,7 +139,7 @@ public class DogContentFragment extends Fragment {
             case BREED_ALL_IMAGES:
                 if (downloadCallback != null) {
                     assert responseItem.dogItem != null;
-                    responseItem.dogItem.url = (String) result;
+                    responseItem.dogItem.setUrl((String) result);
 
                     int position = findPosition(responseItem.dogItem);
 
@@ -157,7 +157,7 @@ public class DogContentFragment extends Fragment {
 
                     assert dog != null;
                     dog.clearRandomURlFromCache();
-                    dog.randomUrl = (String) result;
+                    dog.setRandomUrl((String) result);
 
                     // WeakReference, to check if callback is sent to GC
                     DetailDownloadCallback callback = detailDownloadCallback.get();
@@ -198,12 +198,12 @@ public class DogContentFragment extends Fragment {
             case BREED_RANDOM_IMAGE:
             case BREED_LIST_SUB_BREEDS:
                 assert dogRequestItem.dogItem != null;
-                return String.format(URLS[index], dogRequestItem.dogItem.title.toLowerCase());
+                return String.format(URLS[index], dogRequestItem.dogItem.getTitle().toLowerCase());
 
             case BREED_SUB_RANDOM_IMAGE:
                 assert  dogRequestItem.dogItem != null;
                 assert dogRequestItem.aux != null;
-                return String.format(URLS[index], dogRequestItem.dogItem.title.toLowerCase(),
+                return String.format(URLS[index], dogRequestItem.dogItem.getTitle().toLowerCase(),
                         dogRequestItem.aux);
 
             default:
@@ -287,7 +287,7 @@ public class DogContentFragment extends Fragment {
         }
 
         // Update item using DOG API
-        if (dog.url == null) {
+        if (dog.getUrl() == null) {
             loadBreedImagesUrl(dog);
         }
     }
@@ -310,61 +310,6 @@ public class DogContentFragment extends Fragment {
     public static String makeTitleCase(String word) {
         return String.valueOf(Character.toTitleCase(word.charAt(0))) +
                 word.substring(1);
-    }
-
-    /**
-     * A dummy item representing a piece of content.
-     */
-    public static class DogItem {
-        /**
-         * id is of form [this.title][suffix]
-         * The suffix allows for multiple Dog Items with the same title
-         */
-        public final String id;
-        /**
-         * The breed of the dog is the title
-         */
-        String title;
-        String url;
-        String randomUrl;
-        float rating = 2.5f;
-
-        DogItem(String id, String title, String url) {
-            this.id = id;
-            this.title = title;
-            this.url = url;
-            this.randomUrl = null;
-        }
-
-        @Override
-        public String toString() {
-            return title;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return obj != null && obj instanceof DogItem && id.equals(((DogItem) obj).id);
-        }
-
-        /**
-         * Call from the main thread
-         */
-        void clearRandomURlFromCache() {
-            ImageLoader loader = ImageLoader.getInstance();
-
-            if (randomUrl != null && !randomUrl.equals(url) && loader.isInited()) {
-                loader.getMemoryCache().remove(randomUrl);
-            }
-            randomUrl = null;
-        }
-
-        /**
-         *
-         * @return randomUrl != null ? randomUrl : url
-         */
-        String getCurrentURL() {
-            return randomUrl != null ? randomUrl : url;
-        }
     }
 
     static class DogRequestItem {
