@@ -1,7 +1,10 @@
 package com.example.john.dogapidemo.dog.api.model;
 
-import com.example.john.dogapidemo.ui.DogContentFragment;
+import android.support.annotation.NonNull;
+
 import com.nostra13.universalimageloader.core.ImageLoader;
+
+import java.util.List;
 
 /**
  * A dummy item representing a piece of content.
@@ -19,6 +22,7 @@ public class DogItem {
     private String url;
     private String randomUrl;
     private float rating = 2.5f;
+    private List<String> subbreeds;
 
     public DogItem(String id, String title, String url) {
         this.id = id;
@@ -87,5 +91,13 @@ public class DogItem {
 
     public void setRating(float rating) {
         this.rating = rating;
+    }
+
+    public List<String> getSubbreeds() {
+        return subbreeds;
+    }
+
+    public void setSubbreeds(@NonNull List<String> subbreeds) {
+        this.subbreeds = subbreeds;
     }
 }

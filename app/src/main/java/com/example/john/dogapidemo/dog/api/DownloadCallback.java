@@ -1,7 +1,7 @@
 package com.example.john.dogapidemo.dog.api;
 
 /**
- * An interface to implement by any activity that uses DogContentFragment
+ * * An interface to connect the Dog Repository to the ui
  */
 public interface DownloadCallback {
 

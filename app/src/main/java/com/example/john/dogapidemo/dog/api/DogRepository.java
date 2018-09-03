@@ -1,8 +1,10 @@
 package com.example.john.dogapidemo.dog.api;
 
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.example.john.dogapidemo.dog.api.model.DogItem;
+import com.example.john.dogapidemo.dog.api.reponse.DogBreedRandomImageResponseBody;
 import com.example.john.dogapidemo.dog.api.reponse.DogBreedResponseBody;
 import com.example.john.dogapidemo.dog.api.reponse.DogResponseBody;
 
@@ -23,6 +25,30 @@ public class DogRepository {
     private final DogApi dogApi;
     private final List<DownloadCallback> downloadCallbacks = new ArrayList<>(1);
     private final List<DetailDownloadCallback> detailDownloadCallbacks = new ArrayList<>(1);
+
+    private final Callback<DogBreedRandomImageResponseBody> randomImageUrlCallback = new Callback<DogBreedRandomImageResponseBody>() {
+        @Override
+        public void onResponse(Call<DogBreedRandomImageResponseBody> call, Response<DogBreedRandomImageResponseBody> response) {
+            String breed = parseBreedFromUrl(call.request().url());
+            DogItem dog = ITEM_MAP.get(breed);
+
+            if (dog != null) {
+                dog.clearRandomURlFromCache();
+                dog.setRandomUrl(response.body().getUrl());
+
+                for (DetailDownloadCallback callback : detailDownloadCallbacks)
+                    callback.updateDogWithRandomImage();
+            }
+        }
+
+        @Override
+        public void onFailure(Call<DogBreedRandomImageResponseBody> call, Throwable t) {
+            for (DetailDownloadCallback callback : detailDownloadCallbacks)
+                callback.onFailureFetchDogRandomImage();
+
+            Log.e("Repo", "Unable to load random image url");
+        }
+    };
 
     /**
      * A map of sample (dummy) items, by ID.
@@ -47,6 +73,14 @@ public class DogRepository {
 
     public void unregisterDownloadCallback(DownloadCallback callback) {
         downloadCallbacks.remove(callback);
+    }
+
+    public void registerDetailDownloadCallback(DetailDownloadCallback callback) {
+        detailDownloadCallbacks.add(callback);
+    }
+
+    public void unregisterDetailDownloadCallback(DetailDownloadCallback callback) {
+        detailDownloadCallbacks.remove(callback);
     }
 
     private void loadBreeds() {
@@ -121,7 +155,7 @@ public class DogRepository {
     }
 
     private void loadBreedImagesUrl(DogItem dog) {
-        dogApi.getAllImagesForBreed(dog.getTitle().toLowerCase()).enqueue(new Callback<DogBreedResponseBody>() {
+        dogApi.getAllImageUrlsForBreed(dog.id).enqueue(new Callback<DogBreedResponseBody>() {
             @Override
             public void onResponse(Call<DogBreedResponseBody> call, Response<DogBreedResponseBody> response) {
                 DogBreedResponseBody dogResponse = response.body();
@@ -166,5 +200,49 @@ public class DogRepository {
                 return segments.get(i + 1);
         }
         return "";
+    }
+
+    public void fetchBreedRandomImageUrl(String breed) {
+        dogApi.getRandomImageUrlForBreed(breed).enqueue(randomImageUrlCallback);
+    }
+
+    public void fetchSubBreedRandomImageUrl(String breed, String subbreed) {
+        dogApi.getRandomImageUrlForBreed(breed, subbreed).enqueue(randomImageUrlCallback);
+    }
+
+    /**
+     *
+     * @param item The breed to fetch subbreeds from the DogApi, given the result is not already
+     *              cached
+     * @return The subbreeds if they are already cached
+     */
+    @Nullable
+    public List<String> fetchSubbreeds(DogItem item) {
+        if (item.getSubbreeds() != null)
+            return item.getSubbreeds(); // subbreeds already cached
+
+        dogApi.getAllSubbreedsForBreed(item.id).enqueue(new Callback<DogBreedResponseBody>() {
+            @Override
+            public void onResponse(Call<DogBreedResponseBody> call, Response<DogBreedResponseBody> response) {
+                List<String> subbreeds = response.body().getUrls();
+
+                // Update the model
+                String breed = parseBreedFromUrl(call.request().url());
+                DogItem dog = ITEM_MAP.get(breed);
+                if (dog != null && subbreeds != null)
+                    dog.setSubbreeds(subbreeds);
+
+                // Update the View
+                for (DetailDownloadCallback callback : detailDownloadCallbacks)
+                    callback.updateSubBreedList(subbreeds);
+            }
+
+            @Override
+            public void onFailure(Call<DogBreedResponseBody> call, Throwable t) {
+                for (DetailDownloadCallback callback : detailDownloadCallbacks)
+                    callback.onFailureFetchSubbreeds();
+            }
+        });
+        return null;
     }
 }

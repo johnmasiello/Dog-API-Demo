@@ -71,8 +71,6 @@ public class BreedListActivity extends AppCompatActivity implements DownloadCall
             mTwoPane = true;
         }
 
-        DogContentFragment.getInstance(getSupportFragmentManager());
-
         if (savedInstanceState != null) {
             scrollPosition = savedInstanceState.getInt(SCROLL_POSITION);
         }

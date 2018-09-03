@@ -1,6 +1,7 @@
 package com.example.john.dogapidemo.ui;
 
 import android.graphics.Bitmap;
+import android.support.annotation.NonNull;
 import android.support.design.widget.CollapsingToolbarLayout;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -12,17 +13,19 @@ import android.view.SubMenu;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import com.example.john.dogapidemo.R;
+import com.example.john.dogapidemo.core.DogApplication;
 import com.example.john.dogapidemo.dog.api.DetailDownloadCallback;
 import com.example.john.dogapidemo.dog.api.DogRepository;
 import com.example.john.dogapidemo.dog.api.model.DogItem;
+import com.example.john.dogapidemo.util.Util;
 import com.nostra13.universalimageloader.core.DisplayImageOptions;
 import com.nostra13.universalimageloader.core.ImageLoader;
 import com.nostra13.universalimageloader.core.listener.SimpleImageLoadingListener;
 import com.nostra13.universalimageloader.utils.MemoryCacheUtils;
 
-import java.lang.ref.WeakReference;
 import java.util.List;
 
 /**
@@ -32,14 +35,9 @@ import java.util.List;
  * on handsets.
  */
 public class BreedDetailFragment extends Fragment implements DetailDownloadCallback {
-    /**
-     * The fragment argument representing the item ID that this fragment
-     * represents.
-     */
-    public static final String ARG_ITEM_ID = "item_id";
+    private DogRepository dogRepository;
 
     // Save State
-    public static final String SUBBREED_ARRAY_KEY = "subbreeds_arr";
     public static final String SUBBREED_KEY = "subbreed";
 
     // Fetch the fragment from Fragment Manager
@@ -52,13 +50,18 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
     // Data Variables
     private DogItem mItem;
     private ImageView dogPhoto;
-    private String[] subBreeds;
     private String subbreed = null;
 
     // Helper Variables
     private SubMenu subBreedMenu;
     private static final int SUBBREED_GROUP_ID = 9;
     CollapsingToolbarLayout appBarLayout;
+
+    /**
+     * The fragment argument representing the item ID that this fragment
+     * represents.
+     */
+    public static final String ARG_ITEM_ID = "item_id";
 
     /**
      * Mandatory empty constructor for the fragment manager to instantiate the
@@ -70,6 +73,7 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        dogRepository = DogApplication.get(getContext()).fetchDogRepository();
 
         if (getArguments().containsKey(ARG_ITEM_ID)) {
             // Load the dummy title specified by the fragment
@@ -84,33 +88,36 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
         setRetainInstance(true);
 
         if (savedInstanceState != null) {
-            subBreeds = savedInstanceState.getStringArray(SUBBREED_ARRAY_KEY);
             subbreed = savedInstanceState.getString(SUBBREED_KEY);
         }
     }
 
     @Override
-    public void onSaveInstanceState(Bundle outState) {
+    public void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putStringArray(SUBBREED_ARRAY_KEY, subBreeds);
         outState.putString(SUBBREED_KEY, subbreed);
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    public void onStart() {
+        super.onStart();
+        dogRepository.registerDetailDownloadCallback(this);
+    }
+
+    @Override
+    public void onStop() {
+        dogRepository.unregisterDetailDownloadCallback(this);
+        super.onStop();
+    }
+
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, final ViewGroup container,
                              Bundle savedInstanceState) {
         // Set the title
         android.app.Activity activity = this.getActivity();
         appBarLayout = activity.findViewById(R.id.toolbar_layout);
         if (appBarLayout != null) {
             appBarLayout.setTitle(makeTitleBarTitle());
-
-            final DetailDownloadCallback ddc = this;
-            DogContentFragment fragment = DogContentFragment.getInstance(getFragmentManager());
-
-            if (fragment != null && savedInstanceState == null) {
-                fragment.loadSubBreedList(mItem, new WeakReference<>(ddc));
-            }
         }
 
         View rootView = inflater.inflate(R.layout.breed_detail, container, false);
@@ -151,23 +158,16 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
                 }
             }
         }
-
-        final DetailDownloadCallback ddc = this;
         rootView.findViewById(R.id.randomPicBtn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                DogContentFragment fragment = DogContentFragment.getInstance(getFragmentManager());
-
-                if (fragment != null) {
                     if (subbreed == null) {
-                        fragment.loadBreedRandomImageUrl(mItem, new WeakReference<>(ddc));
+                        dogRepository.fetchBreedRandomImageUrl(mItem.id);
                     } else {
-                        fragment.loadSubBreedRandomImageUrl(mItem, subbreed,
-                                new WeakReference<>(ddc));
+                        dogRepository.fetchSubBreedRandomImageUrl(mItem.id, subbreed);
                     }
                 }
-            }
-        });
+            });
 
         return rootView;
     }
@@ -212,9 +212,18 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
     }
 
     @Override
-    public void updateSubBreedList(String[] subBreeds) {
-        this.subBreeds = subBreeds;
-        addSubBreeds();
+    public void updateSubBreedList(List<String> subBreeds) {
+        addSubBreeds(subBreeds);
+    }
+
+    @Override
+    public void onFailureFetchDogRandomImage() {
+        Toast.makeText(getContext(), "Random image not available", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onFailureFetchSubbreeds() {
+        Toast.makeText(getContext(), "Subbreeds took too long to respond", Toast.LENGTH_SHORT).show();
     }
 
     @Override
@@ -222,16 +231,17 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
         inflater.inflate(R.menu.detail_menu, menu);
         subBreedMenu = menu.findItem(R.id.subbreed).getSubMenu();
 
-        if (subBreeds != null) {
-            addSubBreeds();
+        List<String> subbreeds = dogRepository.fetchSubbreeds(mItem);
+        if (subbreeds != null) {
+            addSubBreeds(subbreeds);
         }
     }
 
-    private void addSubBreeds() {
+    private void addSubBreeds(@NonNull List<String> subbreeds) {
 
         int id = subBreedMenu.size();
-        for (String subBreed : subBreeds) {
-            subBreedMenu.add(SUBBREED_GROUP_ID, id, id, DogContentFragment.makeTitleCase(subBreed));
+        for (String subbreed : subbreeds) {
+            subBreedMenu.add(SUBBREED_GROUP_ID, id, id, Util.capitalize(subbreed));
             id++;
         }
         if (subBreedMenu.size() == 0) {
@@ -243,19 +253,18 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getGroupId() == SUBBREED_GROUP_ID) {
             int position = item.getOrder();
-            subbreed = subBreeds[position];
+            List<String> subbreeds = dogRepository.fetchSubbreeds(mItem);
 
-            // Update toolbar Title
-            if (appBarLayout != null) {
-                appBarLayout.setTitle(makeTitleBarTitle());
-            }
+            if (subbreeds != null) {
+                subbreed = subbreeds.get(position);
 
-            // Update Photo
-            DogContentFragment fragment = DogContentFragment.getInstance(getFragmentManager());
+                // Update toolbar Title
+                if (appBarLayout != null) {
+                    appBarLayout.setTitle(makeTitleBarTitle());
+                }
 
-            if (fragment != null) {
-                fragment.loadSubBreedRandomImageUrl(mItem, subbreed,
-                        new WeakReference<DetailDownloadCallback>(this));
+                // Update Photo
+                dogRepository.fetchSubBreedRandomImageUrl(mItem.id, subbreed);
             }
             return true;
         } else {
@@ -264,7 +273,7 @@ public class BreedDetailFragment extends Fragment implements DetailDownloadCallb
     }
 
     private String makeTitleBarTitle() {
-        return subbreed != null ? mItem.getTitle() + ", " + DogContentFragment.makeTitleCase(subbreed) :
+        return subbreed != null ? mItem.getTitle() + ", " + Util.capitalize(subbreed) :
                 mItem.getTitle();
     }
 }

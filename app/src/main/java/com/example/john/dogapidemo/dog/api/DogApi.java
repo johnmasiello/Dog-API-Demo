@@ -14,15 +14,15 @@ public interface DogApi {
     Call<ResponseBody> getAllBreeds();
 
     @GET("breed/{breed}/images")
-    Call<DogBreedResponseBody> getAllImagesForBreed(@Path("breed") String breed);
+    Call<DogBreedResponseBody> getAllImageUrlsForBreed(@Path("breed") String breed);
 
     @GET("breed/{breed}/images/random")
-    Call<DogBreedRandomImageResponseBody> getRandomImageForBreed(@Path("breed") String breed);
+    Call<DogBreedRandomImageResponseBody> getRandomImageUrlForBreed(@Path("breed") String breed);
 
     @GET("breed/{breed}/list")
     Call<DogBreedResponseBody> getAllSubbreedsForBreed(@Path("breed") String breed);
 
     @GET("breed/{breed}/{subbreed}/images/random")
-    Call<DogBreedRandomImageResponseBody> getRandomImageForBreed(@Path("breed") String breed,
-                                                 @Path("subbreed") String subbreed);
+    Call<DogBreedRandomImageResponseBody> getRandomImageUrlForBreed(@Path("breed") String breed,
+                                                                    @Path("subbreed") String subbreed);
 }

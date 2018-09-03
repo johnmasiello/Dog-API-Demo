@@ -1,10 +1,16 @@
 package com.example.john.dogapidemo.dog.api;
 
+import java.util.List;
+
 /**
- * An interface to implement by any Detail fragment that uses DogContentFragment
+ * An interface to connect the Dog Repository to the ui
  */
 public interface DetailDownloadCallback {
     void updateDogWithRandomImage();
 
-    void updateSubBreedList(String[] subBreeds);
+    void onFailureFetchDogRandomImage();
+
+    void updateSubBreedList(List<String> subBreeds);
+
+    void onFailureFetchSubbreeds();
 }
